@@ -265,7 +265,7 @@ paths:
               example:
                 generated_description: "Smartwatch deportivo de última generación con GPS integrado y resistencia al agua IP68. Monitorea tu ritmo cardíaco 24/7 y disfruta de hasta 7 días de batería con una sola carga. Perfecto para atletas y entusiastas del fitness que buscan superar sus límites."
                 processing_time: 3.2
-                model_used: "gpt-4-turbo"
+                model_used: "gpt-5-mini-2025-08-07"
                 tokens_used: 87
         '400':
           description: Request inválido
@@ -319,7 +319,7 @@ paths:
                 suggested_category: "Electrónica > Wearables > Smartwatches"
                 confidence: 0.95
                 processing_time: 2.1
-                model_used: "gpt-4-turbo"
+                model_used: "gpt-5-mini-2025-08-07"
         '400':
           description: Request inválido
           content:
@@ -416,7 +416,7 @@ components:
           format: float
         model_used:
           type: string
-          example: "gpt-4-turbo"
+          example: "gpt-5-mini-2025-08-07"
         tokens_used:
           type: integer
 
