@@ -1,14 +1,9 @@
 openapi: 3.0.3
 info:
   title: E-Commerce Product Enrichment API
-  description: |
-    Sistema de automatización para enriquecimiento de productos usando IA.
-    Consta de 2 servicios principales:
-    - **Backend Principal**: Orquestador y gestor de estado
-    - **Microservicio IA**: Generación de contenido con LLM
+  description: Automatización de enriquecimiento de productos con IA
   version: 1.0.0
   contact:
-    name: Orquestia PoC
     email: admin@orquestia.io
 
 servers:
@@ -26,21 +21,11 @@ tags:
     description: Health checks de servicios
 
 paths:
-  # ============================================
-  # BACKEND PRINCIPAL - PRODUCTS ENDPOINTS
-  # ============================================
-  
   /products:
     post:
       tags:
         - Products
-      summary: Crear nuevo producto con enriquecimiento IA
-      description: |
-        Crea un producto en la base de datos. Internamente:
-        1. Llama al microservicio IA para generar descripción
-        2. Llama al microservicio IA para generar categoría
-        3. Persiste el producto completo en PostgreSQL
-        4. Retorna el objeto completo al cliente
+      summary: Crear producto con enriquecimiento IA
       operationId: createProduct
       requestBody:
         required: true
@@ -94,22 +79,17 @@ paths:
     get:
       tags:
         - Products
-      summary: Listar todos los productos
-      description: |
-        Retorna un listado de todos los productos almacenados en la base de datos,
-        incluyendo las descripciones y categorías generadas por IA.
+      summary: Listar productos
       operationId: listProducts
       parameters:
         - name: page
           in: query
-          description: Número de página (opcional, para paginación futura)
           schema:
             type: integer
             default: 1
             minimum: 1
         - name: limit
           in: query
-          description: Productos por página (opcional)
           schema:
             type: integer
             default: 100
@@ -166,15 +146,8 @@ paths:
     post:
       tags:
         - Products
-      summary: Simular venta de producto (decrementar stock)
-      description: |
-        Simula una venta decrementando el stock en 1 unidad.
-        
-        **Lógica de negocio**:
-        - Si el stock resultante es menor a 10, dispara un webhook a n8n
-        - El webhook enviará alerta de reposición al gerente
-        
-        **Nota**: Esta operación es idempotente hasta que stock llegue a 0.
+      summary: Vender producto (decrementar stock)
+      description: Simula venta y dispara alerta si stock < 10
       operationId: sellProduct
       parameters:
         - name: id
@@ -202,7 +175,6 @@ paths:
                     description: Stock actualizado después de la venta
                   low_stock_alert_sent:
                     type: boolean
-                    description: Indica si se disparó alerta de stock bajo
               example:
                 id: "123e4567-e89b-12d3-a456-426614174000"
                 name: "Audífonos Bluetooth"
@@ -232,8 +204,7 @@ paths:
     get:
       tags:
         - Health
-      summary: Health check del backend principal
-      description: Verifica el estado del servicio y sus dependencias
+      summary: Health check
       operationId: healthCheck
       responses:
         '200':
@@ -273,25 +244,7 @@ paths:
     post:
       tags:
         - AI Generation
-      summary: Generar descripción de producto con LLM
-      description: |
-        Usa un modelo de lenguaje (OpenAI GPT-4, Gemini, etc.) para generar
-        una descripción atractiva y vendedora basada en el nombre y palabras clave.
-        
-        **Prompt interno**:
-        ```
-        Eres un copywriter experto en e-commerce. Genera una descripción 
-        atractiva y persuasiva para el siguiente producto:
-        
-        Nombre: {name}
-        Características: {keywords}
-        
-        La descripción debe:
-        - Ser entre 50-100 palabras
-        - Resaltar beneficios, no solo características
-        - Usar lenguaje persuasivo
-        - Incluir call-to-action sutil
-        ```
+      summary: Generar descripción de producto
       operationId: generateDescription
       requestBody:
         required: true
@@ -343,17 +296,8 @@ paths:
     post:
       tags:
         - AI Generation
-      summary: Clasificar producto en categoría con LLM
-      description: |
-        Usa un modelo de lenguaje para determinar la categoría más apropiada
-        para el producto basándose en su nombre y descripción.
-        
-        **Formato esperado**: `Categoría Principal > Subcategoría > Subcategoría Específica`
-        
-        **Ejemplos**:
-        - `Electrónica > Audio > Audífonos`
-        - `Ropa > Mujer > Vestidos`
-        - `Hogar > Cocina > Utensilios`
+      summary: Clasificar producto en categoría
+      description: Retorna categoría en formato jerárquico (ej. Electrónica > Audio > Audífonos)
       operationId: generateCategory
       requestBody:
         required: true
@@ -406,7 +350,6 @@ components:
           type: string
           minLength: 3
           maxLength: 200
-          description: Nombre del producto
           example: "Camiseta Algodón Premium"
         keywords:
           type: array
@@ -414,12 +357,10 @@ components:
             type: string
           minItems: 1
           maxItems: 10
-          description: Palabras clave que describen el producto
           example: ["rojo", "algodón", "verano", "casual"]
         stock:
           type: integer
           minimum: 0
-          description: Cantidad inicial en inventario
           example: 50
 
     ProductResponse:
@@ -428,32 +369,24 @@ components:
         id:
           type: string
           format: uuid
-          description: Identificador único del producto
         name:
           type: string
-          description: Nombre del producto
         keywords:
           type: array
           items:
             type: string
-          description: Palabras clave originales
         stock:
           type: integer
-          description: Stock actual
         description:
           type: string
-          description: Descripción generada por IA
         category:
           type: string
-          description: Categoría determinada por IA
         created_at:
           type: string
           format: date-time
-          description: Fecha de creación
         updated_at:
           type: string
           format: date-time
-          description: Última actualización
 
     GenerateDescriptionRequest:
       type: object
@@ -478,18 +411,14 @@ components:
       properties:
         generated_description:
           type: string
-          description: Descripción generada por el LLM
         processing_time:
           type: number
           format: float
-          description: Tiempo de procesamiento en segundos
         model_used:
           type: string
-          description: Modelo LLM utilizado
           example: "gpt-4-turbo"
         tokens_used:
           type: integer
-          description: Tokens consumidos (para tracking de costos)
 
     GenerateCategoryRequest:
       type: object
@@ -509,21 +438,17 @@ components:
       properties:
         suggested_category:
           type: string
-          description: Categoría en formato jerárquico
           example: "Electrónica > Wearables > Smartwatches"
         confidence:
           type: number
           format: float
           minimum: 0
           maximum: 1
-          description: Nivel de confianza de la clasificación
         processing_time:
           type: number
           format: float
-          description: Tiempo de procesamiento en segundos
         model_used:
           type: string
-          description: Modelo LLM utilizado
 
     HealthResponse:
       type: object
@@ -531,41 +456,32 @@ components:
         status:
           type: string
           enum: [healthy, degraded, unhealthy]
-          description: Estado general del servicio
         service:
           type: string
-          description: Nombre del servicio
         version:
           type: string
-          description: Versión del servicio
         timestamp:
           type: string
           format: date-time
-          description: Timestamp de la respuesta
         dependencies:
           type: object
           additionalProperties:
             type: string
-          description: Estado de dependencias externas
 
     Error:
       type: object
       properties:
         error:
           type: string
-          description: Código de error máquina-legible
           example: "validation_error"
         message:
           type: string
-          description: Mensaje de error humano-legible
           example: "El campo 'stock' es requerido"
         details:
           type: object
-          description: Detalles adicionales del error (opcional)
           additionalProperties: true
         retry_after:
           type: integer
-          description: Segundos a esperar antes de reintentar (opcional)
 
   # ============================================
   # WEBHOOKS
@@ -574,13 +490,8 @@ components:
   webhooks:
     lowStockAlert:
       post:
-        summary: Webhook disparado cuando stock es bajo
-        description: |
-          Este webhook es llamado por el Backend Principal cuando un producto
-          alcanza stock bajo (< 10 unidades) después de una venta.
-          
-          **Receptor**: n8n workflow
-          **URL configurada**: Definida en variable de entorno `N8N_WEBHOOK_URL`
+        summary: Alerta de stock bajo
+        description: Webhook disparado cuando stock < 10 después de venta
         requestBody:
           required: true
           content:
@@ -595,17 +506,13 @@ components:
                   product_id:
                     type: string
                     format: uuid
-                    description: ID del producto con stock bajo
                   product_name:
                     type: string
-                    description: Nombre del producto
                   current_stock:
                     type: integer
-                    description: Stock actual (< 10)
                   timestamp:
                     type: string
                     format: date-time
-                    description: Momento de la alerta
               example:
                 product_id: "123e4567-e89b-12d3-a456-426614174000"
                 product_name: "Audífonos Bluetooth"
@@ -613,22 +520,6 @@ components:
                 timestamp: "2025-11-08T10:30:00Z"
         responses:
           '200':
-            description: Webhook recibido exitosamente por n8n
+            description: Webhook recibido por n8n
           '500':
-            description: Error procesando webhook (n8n caído)
-
-# ============================================
-# SECURITY
-# ============================================
-
-# Nota: Para el PoC no hay autenticación
-# En producción agregar:
-# security:
-#   - bearerAuth: []
-#
-# components:
-#   securitySchemes:
-#     bearerAuth:
-#       type: http
-#       scheme: bearer
-#       bearerFormat: JWT
+            description: Error procesando webhook
