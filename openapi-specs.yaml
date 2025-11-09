@@ -520,6 +520,6 @@ components:
                 timestamp: "2025-11-08T10:30:00Z"
         responses:
           '200':
-            description: Webhook recibido por n8n
+            description: Webhook recibido por el LLM
           '500':
             description: Error procesando webhook
