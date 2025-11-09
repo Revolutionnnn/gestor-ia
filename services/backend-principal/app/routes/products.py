@@ -1,13 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
-from sqlalchemy.orm import Session
 from typing import List
 
-from ..database import get_db
-from ..schemas import ProductCreate, ProductResponse, SellResponse
-from ..services.product_service import ProductService
-from ..services.alert_service import send_low_stock_alert
-from ..dependencies import get_product_or_404
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
 from ..config import logger
+from ..database import get_db
+from ..dependencies import get_product_or_404
+from ..schemas import ProductCreate, ProductResponse, SellResponse
+from ..services.alert_service import send_low_stock_alert
+from ..services.product_service import ProductService
 
 router = APIRouter(prefix="/products", tags=["Products"])
 
@@ -43,7 +44,7 @@ async def list_products(db: Session = Depends(get_db)):
 async def sell_product(
     product_id: str,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     product = get_product_or_404(product_id, db)
 
@@ -62,9 +63,9 @@ async def sell_product(
         logger.info(
             "low_stock_alert_scheduled",
             product_id=str(product.id),
-            stock=product.stock
+            stock=product.stock,
         )
-    
+
     return SellResponse(
         id=product.id,
         name=product.name,

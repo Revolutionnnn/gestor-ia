@@ -1,16 +1,16 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .database import engine, Base
-from .routes import health, products
 from .config import ALLOWED_ORIGINS, PORT, logger
+from .database import Base, engine
+from .routes import health, products
 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="Backend Principal",
     version="1.0.0",
-    description="API principal para gestión de productos con IA"
+    description="API principal para gestión de productos con IA",
 )
 
 app.add_middleware(
@@ -37,4 +37,5 @@ async def shutdown_event():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("main:app", host="0.0.0.0", port=PORT, reload=False)

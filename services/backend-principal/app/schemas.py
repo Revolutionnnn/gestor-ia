@@ -1,7 +1,8 @@
-from pydantic import BaseModel, Field, validator
-from typing import List, Optional
-from datetime import datetime
 import uuid
+from datetime import datetime
+from typing import List, Optional
+
+from pydantic import BaseModel, Field, validator
 
 
 class ProductCreate(BaseModel):
@@ -9,7 +10,7 @@ class ProductCreate(BaseModel):
     keywords: List[str] = Field(..., min_items=1, max_items=10)
     stock: int = Field(..., ge=0)
 
-    @validator('keywords')
+    @validator("keywords")
     def clean_keywords(cls, v):
         return [k.strip() for k in v if k.strip()]
 

@@ -1,10 +1,11 @@
-from sqlalchemy.orm import Session
 from typing import List
 
+from sqlalchemy.orm import Session
+
+from ..config import logger
 from ..models import Product
 from ..schemas import ProductCreate
-from ..config import logger
-from .ia_client import generate_description, generate_category
+from .ia_client import generate_category, generate_description
 
 
 class ProductService:
@@ -25,7 +26,7 @@ class ProductService:
             keywords=product_data.keywords,
             stock=product_data.stock,
             description=description,
-            category=category
+            category=category,
         )
 
         self.db.add(db_product)
@@ -35,7 +36,7 @@ class ProductService:
         logger.info(
             "product_created",
             product_id=str(db_product.id),
-            name=product_data.name
+            name=product_data.name,
         )
 
         return db_product
@@ -46,6 +47,7 @@ class ProductService:
     def sell_product(self, product: Product) -> Product:
         if product.stock <= 0:
             from fastapi import HTTPException, status
+
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Stock insuficiente",
@@ -65,4 +67,5 @@ class ProductService:
 
     def needs_stock_alert(self, product: Product) -> bool:
         from ..constants import LOW_STOCK_THRESHOLD
+
         return product.stock < LOW_STOCK_THRESHOLD
