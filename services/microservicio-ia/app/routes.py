@@ -43,33 +43,33 @@ async def health_check():
 @router.post("/generate/description", response_model=GenerateDescriptionResponse)
 async def generate_description(request: GenerateDescriptionRequest):
     start_time = time.time()
-    
+
     logger.info(
         "generate_description_request",
         product_name=request.name,
         keywords_count=len(request.keywords)
     )
-    
+
     try:
         prompt = build_description_prompt(request.name, request.keywords)
         description, tokens = llm_service.generate(prompt, DESCRIPTION_SYSTEM_MESSAGE)
-        
+
         processing_time = time.time() - start_time
-        
+
         logger.info(
             "generate_description_success",
             product_name=request.name,
             processing_time=processing_time,
             tokens_used=tokens
         )
-        
+
         return GenerateDescriptionResponse(
             generated_description=description.strip(),
             processing_time=round(processing_time, 2),
             model_used=OPENAI_MODEL,
             tokens_used=tokens
         )
-    
+
     except HTTPException:
         raise
     except Exception as e:
@@ -83,19 +83,19 @@ async def generate_description(request: GenerateDescriptionRequest):
 @router.post("/generate/category", response_model=GenerateCategoryResponse)
 async def generate_category(request: GenerateCategoryRequest):
     start_time = time.time()
-    
+
     logger.info("generate_category_request", product_name=request.product_name)
-    
+
     try:
         prompt = build_category_prompt(request.product_name, request.description)
         category, tokens = llm_service.generate(prompt)
-        
+
         processing_time = time.time() - start_time
         category = category.strip()
-        
+
         parts = [p.strip() for p in category.split(">")]
         confidence = min(1.0, len(parts) / 3.0)
-        
+
         logger.info(
             "generate_category_success",
             product_name=request.product_name,
@@ -103,14 +103,14 @@ async def generate_category(request: GenerateCategoryRequest):
             confidence=confidence,
             processing_time=processing_time
         )
-        
+
         return GenerateCategoryResponse(
             suggested_category=category,
             confidence=round(confidence, 2),
             processing_time=round(processing_time, 2),
             model_used=OPENAI_MODEL
         )
-    
+
     except HTTPException:
         raise
     except Exception as e:

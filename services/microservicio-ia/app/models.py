@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, validator
 class GenerateDescriptionRequest(BaseModel):
     name: str = Field(..., min_length=3, max_length=200)
     keywords: List[str] = Field(..., min_items=1, max_items=10)
-    
+
     @validator('keywords')
     def validate_keywords(cls, v):
         if not v:
