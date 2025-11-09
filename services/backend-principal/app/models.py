@@ -1,14 +1,7 @@
 import uuid
 
-from sqlalchemy import (
-    JSON,
-    TIMESTAMP,
-    CheckConstraint,
-    Column,
-    Integer,
-    String,
-    Text,
-)
+from sqlalchemy import (JSON, TIMESTAMP, CheckConstraint, Column, Integer,
+                        String, Text)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 
