@@ -1,10 +1,8 @@
+from config import ALLOWED_ORIGINS, LOG_LEVEL, OPENAI_MODEL, PORT, logger
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
-from config import ALLOWED_ORIGINS, PORT, LOG_LEVEL, OPENAI_MODEL, logger
-from routes import router
 from llm_service import llm_service
-
+from routes import router
 
 app = FastAPI(
     title="Microservicio IA",

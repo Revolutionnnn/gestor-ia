@@ -1,5 +1,6 @@
-from pydantic import BaseModel, Field, validator
 from typing import List
+
+from pydantic import BaseModel, Field, validator
 
 
 class GenerateDescriptionRequest(BaseModel):

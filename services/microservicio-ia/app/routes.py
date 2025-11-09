@@ -1,21 +1,14 @@
-from fastapi import APIRouter, HTTPException, status
-from datetime import datetime
 import time
+from datetime import datetime
 
-from models import (
-    GenerateDescriptionRequest,
-    GenerateDescriptionResponse,
-    GenerateCategoryRequest,
-    GenerateCategoryResponse,
-    HealthResponse
-)
+from config import OPENAI_MODEL, logger
+from fastapi import APIRouter, HTTPException, status
 from llm_service import llm_service
-from prompts import (
-    build_description_prompt,
-    build_category_prompt,
-    DESCRIPTION_SYSTEM_MESSAGE
-)
-from config import logger, OPENAI_MODEL
+from models import (GenerateCategoryRequest, GenerateCategoryResponse,
+                    GenerateDescriptionRequest, GenerateDescriptionResponse,
+                    HealthResponse)
+from prompts import (DESCRIPTION_SYSTEM_MESSAGE, build_category_prompt,
+                     build_description_prompt)
 
 router = APIRouter()
 

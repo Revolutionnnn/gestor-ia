@@ -1,6 +1,7 @@
+from config import (GOOGLE_API_KEY, OPENAI_API_KEY, OPENAI_MODEL, TIMEOUT_LLM,
+                    logger)
 from fastapi import HTTPException, status
 from openai import OpenAI
-from config import OPENAI_API_KEY, OPENAI_MODEL, GOOGLE_API_KEY, TIMEOUT_LLM, logger
 
 
 class LLMService:
