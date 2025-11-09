@@ -1,0 +1,634 @@
+openapi: 3.0.3
+info:
+  title: E-Commerce Product Enrichment API
+  description: |
+    Sistema de automatización para enriquecimiento de productos usando IA.
+    Consta de 2 servicios principales:
+    - **Backend Principal**: Orquestador y gestor de estado
+    - **Microservicio IA**: Generación de contenido con LLM
+  version: 1.0.0
+  contact:
+    name: Orquestia PoC
+    email: admin@orquestia.io
+
+servers:
+  - url: http://localhost:8000
+    description: Backend Principal (Development)
+  - url: http://localhost:8001
+    description: Microservicio IA (Development)
+
+tags:
+  - name: Products
+    description: Gestión de productos (Backend Principal)
+  - name: AI Generation
+    description: Generación de contenido con IA (Microservicio IA)
+  - name: Health
+    description: Health checks de servicios
+
+paths:
+  # ============================================
+  # BACKEND PRINCIPAL - PRODUCTS ENDPOINTS
+  # ============================================
+  
+  /products:
+    post:
+      tags:
+        - Products
+      summary: Crear nuevo producto con enriquecimiento IA
+      description: |
+        Crea un producto en la base de datos. Internamente:
+        1. Llama al microservicio IA para generar descripción
+        2. Llama al microservicio IA para generar categoría
+        3. Persiste el producto completo en PostgreSQL
+        4. Retorna el objeto completo al cliente
+      operationId: createProduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+            example:
+              name: "Camiseta Algodón Premium"
+              keywords: ["rojo", "algodón", "verano", "casual", "manga corta"]
+              stock: 50
+      responses:
+        '201':
+          description: Producto creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductResponse'
+              example:
+                id: "123e4567-e89b-12d3-a456-426614174000"
+                name: "Camiseta Algodón Premium"
+                keywords: ["rojo", "algodón", "verano", "casual", "manga corta"]
+                stock: 50
+                description: "Camiseta de algodón 100% premium en vibrante color rojo, perfecta para el verano. Diseño casual y cómodo con manga corta, ideal para cualquier ocasión informal."
+                category: "Ropa > Hombre > Camisetas"
+                created_at: "2025-11-08T10:30:00Z"
+                updated_at: "2025-11-08T10:30:00Z"
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "validation_error"
+                message: "El campo 'stock' debe ser mayor a 0"
+                details:
+                  field: "stock"
+                  constraint: "min_value"
+        '503':
+          description: Servicio IA no disponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "service_unavailable"
+                message: "El microservicio de IA no está respondiendo"
+                retry_after: 60
+
+    get:
+      tags:
+        - Products
+      summary: Listar todos los productos
+      description: |
+        Retorna un listado de todos los productos almacenados en la base de datos,
+        incluyendo las descripciones y categorías generadas por IA.
+      operationId: listProducts
+      parameters:
+        - name: page
+          in: query
+          description: Número de página (opcional, para paginación futura)
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: limit
+          in: query
+          description: Productos por página (opcional)
+          schema:
+            type: integer
+            default: 100
+            minimum: 1
+            maximum: 500
+      responses:
+        '200':
+          description: Lista de productos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProductResponse'
+                  total:
+                    type: integer
+                    description: Total de productos en la base de datos
+                  page:
+                    type: integer
+                  limit:
+                    type: integer
+              example:
+                products:
+                  - id: "123e4567-e89b-12d3-a456-426614174000"
+                    name: "Camiseta Algodón Premium"
+                    keywords: ["rojo", "algodón", "verano"]
+                    stock: 50
+                    description: "Camiseta de algodón 100% premium..."
+                    category: "Ropa > Hombre > Camisetas"
+                    created_at: "2025-11-08T10:30:00Z"
+                    updated_at: "2025-11-08T10:30:00Z"
+                  - id: "223e4567-e89b-12d3-a456-426614174001"
+                    name: "Audífonos Bluetooth"
+                    keywords: ["negro", "inalámbrico", "noise-cancelling"]
+                    stock: 8
+                    description: "Audífonos premium con cancelación de ruido..."
+                    category: "Electrónica > Audio > Audífonos"
+                    created_at: "2025-11-08T11:00:00Z"
+                    updated_at: "2025-11-08T11:15:00Z"
+                total: 2
+                page: 1
+                limit: 100
+        '500':
+          description: Error de base de datos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /products/{id}/sell:
+    post:
+      tags:
+        - Products
+      summary: Simular venta de producto (decrementar stock)
+      description: |
+        Simula una venta decrementando el stock en 1 unidad.
+        
+        **Lógica de negocio**:
+        - Si el stock resultante es menor a 10, dispara un webhook a n8n
+        - El webhook enviará alerta de reposición al gerente
+        
+        **Nota**: Esta operación es idempotente hasta que stock llegue a 0.
+      operationId: sellProduct
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: UUID del producto
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Venta procesada exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                  stock:
+                    type: integer
+                    description: Stock actualizado después de la venta
+                  low_stock_alert_sent:
+                    type: boolean
+                    description: Indica si se disparó alerta de stock bajo
+              example:
+                id: "123e4567-e89b-12d3-a456-426614174000"
+                name: "Audífonos Bluetooth"
+                stock: 7
+                low_stock_alert_sent: true
+        '404':
+          description: Producto no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "not_found"
+                message: "Producto con id '123e4567...' no existe"
+        '400':
+          description: Stock insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "insufficient_stock"
+                message: "No hay stock disponible para este producto"
+                current_stock: 0
+
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check del backend principal
+      description: Verifica el estado del servicio y sus dependencias
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Servicio saludable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: "healthy"
+                service: "backend-principal"
+                version: "1.0.0"
+                timestamp: "2025-11-08T10:30:00Z"
+                dependencies:
+                  database: "ok"
+                  ia_service: "ok"
+        '503':
+          description: Servicio degradado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: "degraded"
+                service: "backend-principal"
+                version: "1.0.0"
+                timestamp: "2025-11-08T10:30:00Z"
+                dependencies:
+                  database: "ok"
+                  ia_service: "error - timeout after 5s"
+
+  # ============================================
+  # MICROSERVICIO IA - GENERATION ENDPOINTS
+  # ============================================
+  
+  /generate/description:
+    post:
+      tags:
+        - AI Generation
+      summary: Generar descripción de producto con LLM
+      description: |
+        Usa un modelo de lenguaje (OpenAI GPT-4, Gemini, etc.) para generar
+        una descripción atractiva y vendedora basada en el nombre y palabras clave.
+        
+        **Prompt interno**:
+        ```
+        Eres un copywriter experto en e-commerce. Genera una descripción 
+        atractiva y persuasiva para el siguiente producto:
+        
+        Nombre: {name}
+        Características: {keywords}
+        
+        La descripción debe:
+        - Ser entre 50-100 palabras
+        - Resaltar beneficios, no solo características
+        - Usar lenguaje persuasivo
+        - Incluir call-to-action sutil
+        ```
+      operationId: generateDescription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateDescriptionRequest'
+            example:
+              name: "Smartwatch Deportivo"
+              keywords: ["GPS", "resistente al agua", "monitor cardíaco", "batería 7 días"]
+      responses:
+        '200':
+          description: Descripción generada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerateDescriptionResponse'
+              example:
+                generated_description: "Smartwatch deportivo de última generación con GPS integrado y resistencia al agua IP68. Monitorea tu ritmo cardíaco 24/7 y disfruta de hasta 7 días de batería con una sola carga. Perfecto para atletas y entusiastas del fitness que buscan superar sus límites."
+                processing_time: 3.2
+                model_used: "gpt-4-turbo"
+                tokens_used: 87
+        '400':
+          description: Request inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error en LLM API
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "llm_api_error"
+                message: "OpenAI API returned 429: Rate limit exceeded"
+        '504':
+          description: Timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "timeout"
+                message: "LLM request exceeded 30s timeout"
+
+  /generate/category:
+    post:
+      tags:
+        - AI Generation
+      summary: Clasificar producto en categoría con LLM
+      description: |
+        Usa un modelo de lenguaje para determinar la categoría más apropiada
+        para el producto basándose en su nombre y descripción.
+        
+        **Formato esperado**: `Categoría Principal > Subcategoría > Subcategoría Específica`
+        
+        **Ejemplos**:
+        - `Electrónica > Audio > Audífonos`
+        - `Ropa > Mujer > Vestidos`
+        - `Hogar > Cocina > Utensilios`
+      operationId: generateCategory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateCategoryRequest'
+            example:
+              product_name: "Smartwatch Deportivo"
+              description: "Smartwatch deportivo con GPS integrado y monitor cardíaco..."
+      responses:
+        '200':
+          description: Categoría sugerida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerateCategoryResponse'
+              example:
+                suggested_category: "Electrónica > Wearables > Smartwatches"
+                confidence: 0.95
+                processing_time: 2.1
+                model_used: "gpt-4-turbo"
+        '400':
+          description: Request inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error en LLM API
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+# ============================================
+# COMPONENTS / SCHEMAS
+# ============================================
+
+components:
+  schemas:
+    CreateProductRequest:
+      type: object
+      required:
+        - name
+        - keywords
+        - stock
+      properties:
+        name:
+          type: string
+          minLength: 3
+          maxLength: 200
+          description: Nombre del producto
+          example: "Camiseta Algodón Premium"
+        keywords:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          maxItems: 10
+          description: Palabras clave que describen el producto
+          example: ["rojo", "algodón", "verano", "casual"]
+        stock:
+          type: integer
+          minimum: 0
+          description: Cantidad inicial en inventario
+          example: 50
+
+    ProductResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador único del producto
+        name:
+          type: string
+          description: Nombre del producto
+        keywords:
+          type: array
+          items:
+            type: string
+          description: Palabras clave originales
+        stock:
+          type: integer
+          description: Stock actual
+        description:
+          type: string
+          description: Descripción generada por IA
+        category:
+          type: string
+          description: Categoría determinada por IA
+        created_at:
+          type: string
+          format: date-time
+          description: Fecha de creación
+        updated_at:
+          type: string
+          format: date-time
+          description: Última actualización
+
+    GenerateDescriptionRequest:
+      type: object
+      required:
+        - name
+        - keywords
+      properties:
+        name:
+          type: string
+          minLength: 3
+          maxLength: 200
+          example: "Smartwatch Deportivo"
+        keywords:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          example: ["GPS", "resistente al agua", "monitor cardíaco"]
+
+    GenerateDescriptionResponse:
+      type: object
+      properties:
+        generated_description:
+          type: string
+          description: Descripción generada por el LLM
+        processing_time:
+          type: number
+          format: float
+          description: Tiempo de procesamiento en segundos
+        model_used:
+          type: string
+          description: Modelo LLM utilizado
+          example: "gpt-4-turbo"
+        tokens_used:
+          type: integer
+          description: Tokens consumidos (para tracking de costos)
+
+    GenerateCategoryRequest:
+      type: object
+      required:
+        - product_name
+        - description
+      properties:
+        product_name:
+          type: string
+          example: "Smartwatch Deportivo"
+        description:
+          type: string
+          example: "Smartwatch con GPS y monitor cardíaco..."
+
+    GenerateCategoryResponse:
+      type: object
+      properties:
+        suggested_category:
+          type: string
+          description: Categoría en formato jerárquico
+          example: "Electrónica > Wearables > Smartwatches"
+        confidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Nivel de confianza de la clasificación
+        processing_time:
+          type: number
+          format: float
+          description: Tiempo de procesamiento en segundos
+        model_used:
+          type: string
+          description: Modelo LLM utilizado
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+          description: Estado general del servicio
+        service:
+          type: string
+          description: Nombre del servicio
+        version:
+          type: string
+          description: Versión del servicio
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp de la respuesta
+        dependencies:
+          type: object
+          additionalProperties:
+            type: string
+          description: Estado de dependencias externas
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Código de error máquina-legible
+          example: "validation_error"
+        message:
+          type: string
+          description: Mensaje de error humano-legible
+          example: "El campo 'stock' es requerido"
+        details:
+          type: object
+          description: Detalles adicionales del error (opcional)
+          additionalProperties: true
+        retry_after:
+          type: integer
+          description: Segundos a esperar antes de reintentar (opcional)
+
+  # ============================================
+  # WEBHOOKS
+  # ============================================
+  
+  webhooks:
+    lowStockAlert:
+      post:
+        summary: Webhook disparado cuando stock es bajo
+        description: |
+          Este webhook es llamado por el Backend Principal cuando un producto
+          alcanza stock bajo (< 10 unidades) después de una venta.
+          
+          **Receptor**: n8n workflow
+          **URL configurada**: Definida en variable de entorno `N8N_WEBHOOK_URL`
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - product_id
+                  - product_name
+                  - current_stock
+                properties:
+                  product_id:
+                    type: string
+                    format: uuid
+                    description: ID del producto con stock bajo
+                  product_name:
+                    type: string
+                    description: Nombre del producto
+                  current_stock:
+                    type: integer
+                    description: Stock actual (< 10)
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: Momento de la alerta
+              example:
+                product_id: "123e4567-e89b-12d3-a456-426614174000"
+                product_name: "Audífonos Bluetooth"
+                current_stock: 7
+                timestamp: "2025-11-08T10:30:00Z"
+        responses:
+          '200':
+            description: Webhook recibido exitosamente por n8n
+          '500':
+            description: Error procesando webhook (n8n caído)
+
+# ============================================
+# SECURITY
+# ============================================
+
+# Nota: Para el PoC no hay autenticación
+# En producción agregar:
+# security:
+#   - bearerAuth: []
+#
+# components:
+#   securitySchemes:
+#     bearerAuth:
+#       type: http
+#       scheme: bearer
+#       bearerFormat: JWT
