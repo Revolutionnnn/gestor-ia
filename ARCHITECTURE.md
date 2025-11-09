@@ -70,16 +70,7 @@ Retorna: Producto con descripción + categoría generadas por IA
 | **Health Checks** | `/health` en cada servicio |
 | **Error Handling** | Si IA falla, retorna error sin crashear |
 
-## 📈 Próximos Pasos
-
-- Autenticación (JWT)
-- Redis para cachear respuestas IA
-- Paginación en listado de productos
-- Dashboard de monitoreo
-
 ---
-
-**Versión**: 1.0.0 (PoC) | **Última actualización**: 2025-11-08
 
 ## 🔄 Flujos de Datos Principales
 
@@ -274,33 +265,3 @@ Frontend → Backend → RabbitMQ → Worker → LLM
 | Tasa de éxito alertas de stock    | > 90%        |
 
 ---
-
-## 📝 Limitaciones Conocidas del PoC
-
-1. **No hay autenticación**: Cualquiera puede acceder
-2. **Single tenant**: No multi-empresa
-3. **Sin paginación eficiente**: GET /products retorna todo
-4. **LLM calls no optimizados**: Sin cache ni batch processing
-5. **Sin backup automatizado de PostgreSQL**
-
----
-
-## 🚀 Roadmap Post-PoC
-
-### Fase 2: MVP
-- Autenticación de usuarios
-- Paginación y filtros
-- Cache de llamadas LLM (Redis)
-- Monitoring dashboard (Grafana)
-
-### Fase 3: Producción
-- Multi-tenancy
-- Message queue para async processing
-- CDN para frontend
-- Backup y disaster recovery
-- CI/CD pipeline
-
----
-
-**Última actualización**: 2025-11-08  
-**Versión**: 1.0.0
