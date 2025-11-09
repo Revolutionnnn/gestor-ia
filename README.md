@@ -273,8 +273,4 @@ Este es un proyecto de prueba técnica. Para sugerencias o mejoras:
 4. Push a la branch (`git push origin feature/mejora`)
 5. Abre un Pull Request
 
-## 📄 Licencia
-
-MIT License - Ver [LICENSE](LICENSE) para más detalles
-
 Desarrollado con ❤️ para la prueba técnica de Orquestia
