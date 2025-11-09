@@ -57,7 +57,7 @@ PoC de un sistema interno que automatiza la creación y enriquecimiento de catá
 
 ```bash
 git clone <repository-url>
-cd proyecto-ia
+cd gestor-ia
 ```
 
 ### 2. Configurar Variables de Entorno
