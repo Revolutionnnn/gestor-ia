@@ -8,7 +8,7 @@ class ProductCreate(BaseModel):
     name: str = Field(..., min_length=3, max_length=200)
     keywords: List[str] = Field(..., min_items=1, max_items=10)
     stock: int = Field(..., ge=0)
-    
+
     @validator('keywords')
     def clean_keywords(cls, v):
         return [k.strip() for k in v if k.strip()]

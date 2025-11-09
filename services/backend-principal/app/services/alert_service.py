@@ -113,7 +113,7 @@ async def send_low_stock_alert(
             mock_price,
             alert_message
         )
-        
+
         logger.warning(
             "low_stock_alert",
             product_id=product_id,
@@ -122,7 +122,7 @@ async def send_low_stock_alert(
             price=mock_price,
             message=alert_message.strip()
         )
-        
+
         return True
     except Exception as e:
         logger.error("alert_error", error=str(e), product_id=product_id)

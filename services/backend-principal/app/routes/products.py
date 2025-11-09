@@ -46,12 +46,12 @@ async def sell_product(
     db: Session = Depends(get_db)
 ):
     product = get_product_or_404(product_id, db)
-    
+
     service = ProductService(db)
     product = service.sell_product(product)
-    
+
     alert_will_be_sent = service.needs_stock_alert(product)
-    
+
     if alert_will_be_sent:
         background_tasks.add_task(
             send_low_stock_alert,
