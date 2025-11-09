@@ -1,202 +1,85 @@
-# Arquitectura del Sistema - E-Commerce Product Enrichment PoC
+# Arquitectura del Sistema - PoC Enriquecimiento de Productos
 
-## 📐 Decisiones Arquitectónicas (ADRs)
+## 🎯 Visión General
 
-### ADR-001: Arquitectura de Microservicios
+Sistema modular que enriquece productos con IA, automatiza alertas de stock y proporciona un panel de administración.
 
-**Contexto**: Necesitamos un sistema escalable que separe responsabilidades entre enriquecimiento de productos, gestión de datos y automatización.
+## 🏗️ Componentes
 
-**Decisión**: Implementar una arquitectura de microservicios con 3 servicios principales:
-1. **Backend Principal (BFF)** - Orquestador y gestor de estado
-2. **Microservicio IA** - Especializado en generación de contenido
-3. **Motor de Automatización (n8n)** - Gestión de workflows
+| Componente | Tecnología | Puerto | Función |
+|---|---|---|---|
+| **Frontend** | React + Vite | 5173/80 | Panel admin para gestionar productos |
+| **Backend Principal** | FastAPI | 8000 | API principal - orquesta todo |
+| **Microservicio IA** | FastAPI | 8001 | Genera descripciones y categorías con LLM |
+| **Base de Datos** | PostgreSQL | 5432 | Almacena productos y stock |
+| **OpenAI SDK** | Python (OpenAI) | - | Generación de IA integrada en backend |
 
-**Consecuencias**:
-- ✅ **Pros**: 
-  - Separación de responsabilidades (SRP)
-  - Escalabilidad independiente de cada servicio
-  - Facilita testing y deployment aislado
-  - El servicio IA puede ser reutilizado por otros sistemas
-- ❌ **Contras**:
-  - Mayor complejidad operacional
-  - Latencia adicional por comunicación inter-servicios
-  - Requiere manejo de fallos distribuidos
-
-**Trade-offs Aceptados**: Sacrificamos simplicidad por escalabilidad y mantenibilidad a largo plazo.
-
----
-
-### ADR-002: FastAPI como Framework Backend
-
-**Contexto**: Necesitamos un framework Python moderno, rápido y con buen soporte para APIs REST.
-
-**Decisión**: Usar FastAPI para ambos backends (Principal y Microservicio IA).
-
-**Alternativas Consideradas**:
-- **Flask**: Más maduro pero menos performante y sin tipado nativo
-- **Django REST Framework**: Demasiado pesado para microservicios
-- **Express.js (Node)**: Requeriría cambio de lenguaje
-
-**Razones**:
-- ✅ Tipado automático con Pydantic (validación y documentación)
-- ✅ Alto rendimiento (basado en Starlette y Uvicorn)
-- ✅ Documentación OpenAPI automática
-- ✅ Async/await nativo para llamadas HTTP concurrentes
-- ✅ Ecosistema Python ideal para integración con LLMs
-
----
-
-### ADR-003: PostgreSQL como Base de Datos
-
-**Contexto**: Necesitamos persistencia relacional con soporte para tipos de datos complejos.
-
-**Decisión**: PostgreSQL como base de datos principal.
-
-**Alternativas Consideradas**:
-- **MySQL**: Menos features avanzados (JSONB, arrays)
-- **MongoDB**: Overkill para este modelo de datos estructurado
-- **SQLite**: No apto para producción/concurrencia
-
-**Razones**:
-- ✅ Soporte nativo para JSONB (almacenar keywords como array)
-- ✅ ACID compliance para consistencia de stock
-- ✅ Excelente soporte en SQLAlchemy
-- ✅ Gratuito y open-source
-- ✅ Robusto para producción
-
----
-
-### ADR-004: Comunicación Síncrona HTTP REST
-
-**Contexto**: Los servicios necesitan comunicarse entre sí.
-
-**Decisión**: Comunicación REST HTTP síncrona con timeouts y reintentos.
-
-**Alternativas Consideradas**:
-- **gRPC**: Más performante pero mayor complejidad
-- **Message Queue (RabbitMQ/Kafka)**: Asíncrono, innecesario para PoC
-- **GraphQL**: Overkill para comunicación interna
-
-**Razones**:
-- ✅ Simplicidad de implementación
-- ✅ Debugging más sencillo
-- ✅ Compatible con herramientas estándar (curl, Postman)
-- ✅ Suficiente para un PoC
-
-**Estrategia de Resiliencia**:
-```python
-# Timeouts configurados
-TIMEOUT_IA_SERVICE = 30s  # LLMs pueden tardar
-TIMEOUT_WEBHOOK = 10s
-TIMEOUT_DB = 5s
-
-# Reintentos con exponential backoff
-MAX_RETRIES = 3
-BACKOFF_FACTOR = 2  # 1s, 2s, 4s
-```
-
----
-
-### ADR-005: n8n para Automatización
-
-**Contexto**: Necesitamos un motor de workflows para alertas de stock.
-
-**Decisión**: Usar n8n (low-code workflow automation).
-
-**Alternativas Consideradas**:
-- **Script LangChain**: Más código custom pero menos visual
-- **Apache Airflow**: Demasiado pesado para workflows simples
-- **Zapier/Make**: SaaS, no self-hosted
-
-**Razones**:
-- ✅ Visual y fácil de demostrar
-- ✅ Self-hosted (cumple requisito Docker)
-- ✅ Webhook trigger nativo
-- ✅ Integración HTTP simple
-- ✅ Exportable como JSON (versionable)
-
----
-
-### ADR-006: React + Vite para Frontend
-
-**Contexión**: UI moderna y reactiva para el panel admin.
-
-**Decisión**: React con Vite como bundler.
-
-**Alternativas Consideradas**:
-- **Next.js**: SSR innecesario para admin panel interno
-- **Vue.js**: Menos demanda en el mercado
-- **Create React App**: Deprecado y más lento que Vite
-
-**Razones**:
-- ✅ Vite extremadamente rápido (HMR instantáneo)
-- ✅ React es el estándar de la industria
-- ✅ Ecosistema maduro de librerías
-- ✅ Setup minimalista
-
----
-
-## 🏗️ Diagrama de Arquitectura
+## 📊 Flujo Principal
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         USUARIO FINAL                            │
-│                    (Gerente de Bodega)                          │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-                             │ HTTP
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                      FRONTEND (React + Vite)                     │
-│  ┌──────────────────┐  ┌────────────────────────────────────┐  │
-│  │  Formulario      │  │  Lista de Productos                │  │
-│  │  Añadir Producto │  │  + Botón "Simular Venta"          │  │
-│  └──────────────────┘  └────────────────────────────────────┘  │
-│                     Puerto: 5173 (dev) / 80 (prod)              │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-                             │ REST API
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│              BACKEND PRINCIPAL (FastAPI - BFF)                   │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │ Endpoints:                                               │   │
-│  │ • POST /products   → Orquesta creación + IA             │   │
-│  │ • GET  /products   → Lista productos de DB              │   │
-│  │ • POST /products/{id}/sell → Venta + Alerta stock      │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                     Puerto: 8000                                 │
-└──────────┬─────────────────────┬────────────────────┬───────────┘
-           │                     │                    │
-           │ HTTP                │ HTTP               │ Webhook
-           ▼                     ▼                    ▼
-┌──────────────────────┐  ┌─────────────────┐  ┌───────────────┐
-│  MICROSERVICIO IA    │  │   PostgreSQL    │  │     n8n       │
-│    (FastAPI)         │  │                 │  │ Automatización│
-│ ┌──────────────────┐ │  │ ┌─────────────┐ │  │ ┌───────────┐ │
-│ │/generate/        │ │  │ │   Tabla:    │ │  │ │ Workflow: │ │
-│ │ description      │ │  │ │  products   │ │  │ │  Stock    │ │
-│ │                  │ │  │ │             │ │  │ │  Alert    │ │
-│ │/generate/        │ │  │ │ • id        │ │  │ └───────────┘ │
-│ │ category         │ │  │ │ • name      │ │  │               │
-│ └──────────────────┘ │  │ │ • keywords  │ │  │ • Webhook     │
-│         │            │  │ │ • stock     │ │  │ • HTTP Mock   │
-│         │ API        │  │ │ • desc      │ │  │ • Formatear   │
-│         ▼            │  │ │ • category  │ │  │ • Log/Email   │
-│  ┌──────────────┐   │  │ └─────────────┘ │  │               │
-│  │ OpenAI API   │   │  │   Puerto: 5432  │  │ Puerto: 5678  │
-│  │ o Gemini     │   │  └─────────────────┘  └───────────────┘
-│  └──────────────┘   │
-│   Puerto: 8001      │
-└─────────────────────┘
-
-                    ┌─────────────────────┐
-                    │   Docker Network    │
-                    │   app-network       │
-                    └─────────────────────┘
+1. Usuario entra al Frontend (React)
+2. Crea producto: {nombre, palabras clave, stock}
+3. Backend llama a OpenAI SDK → Genera descripción
+4. Backend llama a OpenAI SDK → Genera categoría
+5. Backend guarda todo en PostgreSQL
+6. Usuario simula venta → Backend actualiza stock
+7. Si stock < 10 → Backend genera alerta con OpenAI
 ```
 
+## 🔌 APIs
+
+**Backend Principal** (`POST /products`)
+```json
+{
+  "name": "Laptop Dell",
+  "keywords": ["laptop", "dell", "intel"],
+  "stock": 50
+}
+```
+Retorna: Producto con descripción + categoría generadas por IA
+
+**Venta** (`POST /products/{id}/sell`)
+```json
+{ "new_stock": 49 }
+```
+
+**Alerta de Stock** (generada automáticamente cuando stock < 10)
+```json
+{
+  "product_name": "Laptop Dell",
+  "current_stock": 8,
+  "product_id": 1,
+  "alert_message": "⚠️ Stock bajo para Laptop Dell"
+}
+```
+
+## 🛠️ Stack Tecnológico
+
+- **Backend**: Python (FastAPI) - tipado, rápido, buena documentación
+- **Frontend**: React (Vite) - moderno, HMR rápido
+- **DB**: PostgreSQL - robusto, features avanzadas
+- **LLM**: OpenAI SDK (integrado en backend)
+- **Deploy**: Docker + Docker Compose
+
+## ⚡ Características de Resiliencia
+
+| Característica | Implementación |
+|---|---|
+| **Reintentos** | 3 intentos con espera exponencial (1s → 2s → 4s) |
+| **Timeouts** | OpenAI SDK: 30s, BD: 5s |
+| **Health Checks** | `/health` en cada servicio |
+| **Error Handling** | Si IA falla, retorna error sin crashear |
+
+## 📈 Próximos Pasos
+
+- Autenticación (JWT)
+- Redis para cachear respuestas IA
+- Paginación en listado de productos
+- Dashboard de monitoreo
+
 ---
+
+**Versión**: 1.0.0 (PoC) | **Última actualización**: 2025-11-08
 
 ## 🔄 Flujos de Datos Principales
 
@@ -231,11 +114,9 @@ BACKOFF_FACTOR = 2  # 1s, 2s, 4s
 3. Backend Principal → PostgreSQL: UPDATE stock = stock - 1
 4. Backend Principal: Verifica si stock < 10
 5. SI stock < 10:
-   a. Backend Principal → n8n Webhook: 
-      {product_name, current_stock, product_id}
-   b. n8n → API Mock (dummyjson): GET precio proveedor
-   c. n8n: Formatea mensaje de alerta
-   d. n8n: Log en consola / Envía email
+   a. Backend Principal → OpenAI SDK: Genera alerta personalizada
+   b. OpenAI SDK → Backend Principal: Alerta formateada
+   c. Backend: Log en consola o notificación
 6. Backend Principal → Frontend: {updated_stock}
 7. Frontend: Actualiza UI con nuevo stock
 ```
@@ -248,15 +129,13 @@ BACKOFF_FACTOR = 2  # 1s, 2s, 4s
 
 | Servicio          | Timeout | Razón                              |
 |-------------------|---------|------------------------------------|
-| LLM API           | 30s     | Generación puede tardar            |
-| Microservicio IA  | 35s     | Incluye timeout del LLM + buffer   |
+| OpenAI API        | 30s     | Generación puede tardar            |
 | PostgreSQL        | 5s      | Queries deben ser rápidas          |
-| n8n Webhook       | 10s     | No bloqueante, puede fallar        |
 
 ### 2. Circuit Breaker Pattern
 
 ```python
-# Si el Microservicio IA falla 5 veces consecutivas:
+# Si el OpenAI SDK falla 5 veces consecutivas:
 # → Abrimos el circuito por 60 segundos
 # → Retornamos error inmediato sin llamar
 # → Después de 60s, intentamos 1 request (half-open)
@@ -270,7 +149,7 @@ BACKOFF_FACTOR = 2  # 1s, 2s, 4s
     wait=wait_exponential(multiplier=1, min=1, max=10),
     retry=retry_if_exception_type(requests.exceptions.Timeout)
 )
-async def call_ia_service():
+async def call_openai_api():
     # Intento 1: inmediato
     # Intento 2: después de 1s
     # Intento 3: después de 2s
@@ -279,8 +158,7 @@ async def call_ia_service():
 
 ### 4. Degradación Graceful
 
-- **Si Microservicio IA falla**: Retornar error 503 pero no crashear el sistema
-- **Si n8n webhook falla**: Logear error pero completar la venta (no es crítico)
+- **Si OpenAI SDK falla**: Retornar error 503 pero no crashear el sistema
 - **Si PostgreSQL falla**: Retornar error 500 y logear para investigación
 
 ### 5. Health Checks
@@ -318,7 +196,7 @@ logger.info("product_created", product_id=123, name="Producto X")
 logger.warning("stock_low", product_id=123, stock=8)
 
 # ERROR: Errores que requieren atención
-logger.error("ia_service_timeout", service="description", timeout=30)
+logger.error("openai_api_timeout", timeout=30)
 
 # CRITICAL: Fallos del sistema
 logger.critical("database_connection_lost")
@@ -345,19 +223,6 @@ logger.critical("database_connection_lost")
 3. **Errores de LLM** (monitoreo de costos)
 4. **Alertas de stock** (auditoría)
 5. **Fallos de DB** (disponibilidad)
-
----
-
-## 🔐 Consideraciones de Seguridad (Futuro)
-
-Para un PoC no se implementan, pero en producción:
-
-- [ ] Autenticación JWT para usuarios
-- [ ] Rate limiting en endpoints públicos
-- [ ] Validación de input más estricta (SQL injection)
-- [ ] HTTPS/TLS en todas las comunicaciones
-- [ ] Secrets management (Vault, AWS Secrets)
-- [ ] CORS configurado correctamente
 
 ---
 
@@ -406,7 +271,7 @@ Frontend → Backend → RabbitMQ → Worker → LLM
 | Disponibilidad sistema            | > 95%        |
 | Precisión categorización IA       | > 80%        |
 | Tiempo respuesta GET /products    | < 500ms      |
-| Tasa de éxito alertas n8n         | > 90%        |
+| Tasa de éxito alertas de stock    | > 90%        |
 
 ---
 
@@ -416,8 +281,7 @@ Frontend → Backend → RabbitMQ → Worker → LLM
 2. **Single tenant**: No multi-empresa
 3. **Sin paginación eficiente**: GET /products retorna todo
 4. **LLM calls no optimizados**: Sin cache ni batch processing
-5. **n8n webhook es fire-and-forget**: No confirmación de entrega
-6. **Sin backup automatizado de PostgreSQL**
+5. **Sin backup automatizado de PostgreSQL**
 
 ---
 
@@ -439,5 +303,4 @@ Frontend → Backend → RabbitMQ → Worker → LLM
 ---
 
 **Última actualización**: 2025-11-08  
-**Versión**: 1.0.0  
-**Autor**: Equipo Orquestia PoC
+**Versión**: 1.0.0
