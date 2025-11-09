@@ -25,21 +25,16 @@ PoC de un sistema interno que automatiza la creación y enriquecimiento de catá
                      └────────┬─────────┘               │
                               │                         │
                      ┌────────▼─────────┐      ┌────────▼────────┐
-                     │   PostgreSQL     │      │  OpenAI API /   │
-                     │   Database       │      │  Gemini         │
+                     │   PostgreSQL     │      │  OpenAI SDK     │
+                     │   Database       │      │  (LLM Calls)    │
                      └──────────────────┘      └─────────────────┘
-                              │
-                     ┌────────▼─────────┐
-                     │  n8n Automation  │
-                     │  (Stock Alerts)  │
-                     └──────────────────┘
 ```
 
 **Tecnologías**:
 - **Frontend**: React 18 + Vite
 - **Backend Principal**: FastAPI (Python 3.11+)
 - **Microservicio IA**: FastAPI (Python 3.11+)
-- **Automatización**: n8n
+- **LLM**: OpenAI API / Gemini
 - **Base de Datos**: PostgreSQL 16
 - **Contenerización**: Docker + Docker Compose
 
@@ -108,8 +103,7 @@ docker-compose ps
 | 🖥️ **Frontend (UI)** | http://localhost:5173 | - |
 | ⚙️ **Backend API Docs** | http://localhost:8000/docs | - |
 | 🤖 **Microservicio IA Docs** | http://localhost:8001/docs | - |
-| 🔄 **n8n Automation UI** | http://localhost:5678 | admin / admin123 |
-| 🗄️ **PostgreSQL** | localhost:5432 | postgres / postgres_password |
+| ️ **PostgreSQL** | localhost:5432 | postgres / postgres_password |
 
 ## 🎯 Uso del Sistema
 
@@ -128,10 +122,7 @@ docker-compose ps
 ### Simular Venta y Alerta de Stock
 
 1. En la lista de productos, haz clic en "Simular Venta" varias veces
-2. Cuando el stock baje de 10 unidades, se disparará automáticamente:
-   - Webhook a n8n
-   - Consulta mock de precio de proveedor
-   - Alerta formateada en logs de n8n
+2. Cuando el stock baje de 10 unidades, se disparará automáticamente una alerta registrada en la base de datos
 
 ### Desde la API (Postman / cURL)
 
@@ -202,17 +193,7 @@ pytest tests/ -v
 pytest tests/test_products.py -v
 ```
 
-## 📊 Configurar n8n Workflow
-
-1. Accede a http://localhost:5678
-2. Login: `admin` / `admin123`
-3. Importa el workflow:
-   - Ve a "Workflows" → "Import from File"
-   - Selecciona `./n8n-workflows/stock-alert-workflow.json`
-4. Activa el workflow
-5. El webhook estará disponible en: `http://n8n:5678/webhook/stock-alert`
-
-## 🔍 Troubleshooting
+##  Troubleshooting
 
 ### Problema: "Microservicio IA no responde"
 
@@ -263,14 +244,6 @@ OPENAI_MODEL=gpt-3.5-turbo
 - ❌ No usar en producción sin hardening
 - ❌ API keys expuestas en .env (usar secrets manager en prod)
 
-**Para producción, implementar**:
-- [ ] Autenticación JWT
-- [ ] Rate limiting
-- [ ] HTTPS/TLS
-- [ ] Secrets management (AWS Secrets Manager, Vault)
-- [ ] Validación de input más estricta
-- [ ] Backup automatizado de DB
-
 ## 📈 Métricas y Observabilidad
 
 ### Logs Estructurados
@@ -290,57 +263,6 @@ curl http://localhost:8000/health | jq
 curl http://localhost:8001/health | jq
 ```
 
-## 🚀 Roadmap Post-PoC
-
-- [ ] Autenticación de usuarios (JWT)
-- [ ] Paginación eficiente en listado
-- [ ] Cache de llamadas LLM (Redis)
-- [ ] Batch processing para múltiples productos
-- [ ] Dashboard de analytics (Grafana)
-- [ ] CI/CD pipeline
-- [ ] Multi-tenancy
-
-## 📝 Estructura del Proyecto
-
-```
-proyecto-ia/
-├── services/
-│   ├── backend-principal/      # BFF - Orquestador
-│   │   ├── app/
-│   │   │   ├── main.py
-│   │   │   ├── models.py
-│   │   │   ├── routes/
-│   │   │   └── services/
-│   │   ├── Dockerfile
-│   │   └── requirements.txt
-│   │
-│   └── microservicio-ia/       # Servicio de IA
-│       ├── app/
-│       │   ├── main.py
-│       │   └── llm_service.py
-│       ├── Dockerfile
-│       └── requirements.txt
-│
-├── frontend/                    # React + Vite
-│   ├── src/
-│   │   ├── components/
-│   │   ├── pages/
-│   │   └── services/
-│   ├── Dockerfile
-│   └── package.json
-│
-├── n8n-workflows/               # Workflows de automatización
-│   └── stock-alert-workflow.json
-│
-├── docker-compose.yml           # Orquestación completa
-├── .env.example                 # Variables de entorno
-├── database-schema.sql          # Schema de PostgreSQL
-├── ARCHITECTURE.md              # Documentación arquitectura
-├── DIAGRAMS.md                  # Diagramas visuales
-├── openapi-specs.yaml           # Contratos API
-└── README.md                    # Este archivo
-```
-
 ## 🤝 Contribución
 
 Este es un proyecto de prueba técnica. Para sugerencias o mejoras:
@@ -354,13 +276,5 @@ Este es un proyecto de prueba técnica. Para sugerencias o mejoras:
 ## 📄 Licencia
 
 MIT License - Ver [LICENSE](LICENSE) para más detalles
-
-## 📧 Contacto
-
-**Orquestia** - admin@orquestia.io
-
----
-
-**⭐ Si te gustó este proyecto, dale una estrella en GitHub!**
 
 Desarrollado con ❤️ para la prueba técnica de Orquestia
