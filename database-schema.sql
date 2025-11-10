@@ -1,8 +1,6 @@
-# Esquema de Base de Datos - PostgreSQL
+-- Esquema de Base de Datos - PostgreSQL
+-- Tabla: products
 
-## Tabla: products
-
-```sql
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE products (
@@ -35,35 +33,9 @@ CREATE TRIGGER update_products_updated_at
     BEFORE UPDATE ON products
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
-```
 
-## Datos de Prueba
-
-```sql
+-- Datos de Prueba
 INSERT INTO products (name, keywords, stock, description, category) VALUES
 ('Laptop Dell', '["laptop", "dell", "intel"]'::jsonb, 50, 'Laptop profesional', 'Electrónica > Laptops'),
 ('Mouse Logitech', '["mouse", "inalámbrico", "negro"]'::jsonb, 25, 'Mouse inalámbrico', 'Electrónica > Accesorios'),
 ('Teclado Mecánico', '["teclado", "mecánico", "rgb"]'::jsonb, 15, 'Teclado gaming', 'Electrónica > Periféricos');
-```
-
-## Queries Útiles
-
-```sql
--- Productos con stock bajo
-SELECT id, name, stock FROM products WHERE stock < 10 ORDER BY stock ASC;
-
--- Buscar por keyword
-SELECT id, name, keywords FROM products WHERE keywords @> '["laptop"]'::jsonb;
-
--- Resumen de stock
-SELECT COUNT(*) AS total, SUM(stock) AS inventario_total FROM products;
-
--- Productos sin categoría
-SELECT id, name FROM products WHERE category IS NULL OR category = '';
-```
-
-```
-
----
-
-**Versión**: 1.0.0 | **Última actualización**: 2025-11-08
