@@ -9,21 +9,22 @@ Sistema modular que enriquece productos con IA, automatiza alertas de stock y pr
 | Componente | Tecnología | Puerto | Función |
 |---|---|---|---|
 | **Frontend** | React + Vite | 5173/80 | Panel admin para gestionar productos |
-| **Backend Principal** | FastAPI | 8000 | API principal - orquesta todo |
-| **Microservicio IA** | FastAPI | 8001 | Genera descripciones y categorías con LLM |
-| **Base de Datos** | PostgreSQL | 5432 | Almacena productos y stock |
-| **OpenAI SDK** | Python (OpenAI) | - | Generación de IA integrada en backend |
+| **Backend Principal** | FastAPI | 8000 | API principal - orquesta servicios |
+| **Microservicio IA** | FastAPI | 8001 | Genera descripciones y categorías |
+| **Microservicio Alertas** | FastAPI | 8002 | Gestiona alertas de stock |
+| **Base de Datos** | PostgreSQL | 5432 | Almacena productos y alertas |
 
 ## 📊 Flujo Principal
 
 ```
 1. Usuario entra al Frontend (React)
 2. Crea producto: {nombre, palabras clave, stock}
-3. Backend llama a OpenAI SDK → Genera descripción
-4. Backend llama a OpenAI SDK → Genera categoría
-5. Backend guarda todo en PostgreSQL
+3. Backend llama a Microservicio IA → Genera descripción
+4. Backend llama a Microservicio IA → Genera categoría
+5. Backend guarda en PostgreSQL
 6. Usuario simula venta → Backend actualiza stock
-7. Si stock < 10 → Backend genera alerta con OpenAI
+7. Si stock < 10 → Backend notifica a Microservicio Alertas
+8. Microservicio Alertas genera y guarda la alerta
 ```
 
 ## 🔌 APIs
@@ -48,8 +49,7 @@ Retorna: Producto con descripción + categoría generadas por IA
 {
   "product_name": "Laptop Dell",
   "current_stock": 8,
-  "product_id": 1,
-  "alert_message": "⚠️ Stock bajo para Laptop Dell"
+  "alert_message": "⚠️ Stock bajo"
 }
 ```
 
@@ -100,16 +100,13 @@ Retorna: Producto con descripción + categoría generadas por IA
 ### Flujo 2: Simular Venta y Alerta de Stock
 
 ```
-1. Usuario → Frontend: Click "Simular Venta" en producto
+1. Usuario → Frontend: Click "Simular Venta"
 2. Frontend → Backend Principal: POST /products/{id}/sell
-3. Backend Principal → PostgreSQL: UPDATE stock = stock - 1
-4. Backend Principal: Verifica si stock < 10
-5. SI stock < 10:
-   a. Backend Principal → OpenAI SDK: Genera alerta personalizada
-   b. OpenAI SDK → Backend Principal: Alerta formateada
-   c. Backend: Log en consola o notificación
-6. Backend Principal → Frontend: {updated_stock}
-7. Frontend: Actualiza UI con nuevo stock
+3. Backend Principal → PostgreSQL: UPDATE stock
+4. Si stock < 10:
+   - Backend → Microservicio Alertas: POST /alerts
+5. Microservicio Alertas → PostgreSQL: Guarda alerta
+6. Backend → Frontend: {updated_stock}
 ```
 
 ---

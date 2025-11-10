@@ -5,16 +5,23 @@
 ```mermaid
 graph TB
     UI["🖥️ Frontend React<br/>Puerto: 5173"]
-    BFF["⚙️ Backend FastAPI<br/>Puerto: 8000"]
+    BFF["⚙️ Backend Principal<br/>Puerto: 8000"]
+    IA["🧠 Microservicio IA<br/>Puerto: 8001"]
+    ALERTS["🚨 Microservicio Alertas<br/>Puerto: 8002"]
     DB[("🗄️ PostgreSQL<br/>Puerto: 5432")]
-    LLM["🧠 OpenAI API"]
+    LLM["� OpenAI API"]
 
     UI -->|HTTP| BFF
+    BFF -->|HTTP| IA
+    BFF -->|HTTP| ALERTS
     BFF -->|SQL| DB
-    BFF -->|HTTP| LLM
+    ALERTS -->|SQL| DB
+    IA -->|HTTP| LLM
 
     style UI fill:#61dafb
     style BFF fill:#009688
+    style IA fill:#673ab7
+    style ALERTS fill:#f44336
     style DB fill:#336791
     style LLM fill:#10a37f
 ```
@@ -26,40 +33,46 @@ sequenceDiagram
     actor U as Usuario
     participant UI as Frontend
     participant API as Backend
+    participant IA as Microservicio IA
     participant LLM as OpenAI
     participant DB as PostgreSQL
 
     U->>UI: Ingresa producto
     UI->>API: POST /products
-    API->>LLM: Genera descripción
-    LLM-->>API: Descripción
-    API->>LLM: Genera categoría
-    LLM-->>API: Categoría
-    API->>DB: Guarda producto
+    API->>IA: POST /generate/description
+    IA->>LLM: Prompt
+    LLM-->>IA: Descripción
+    IA-->>API: Descripción
+    API->>IA: POST /generate/category
+    IA->>LLM: Prompt
+    LLM-->>IA: Categoría
+    IA-->>API: Categoría
+    API->>DB: INSERT producto
     DB-->>API: ✅
-    API-->>UI: Producto enriquecido
+    API-->>UI: Producto completo
     UI-->>U: Mostrar en lista
 ```
 
-## � Venta y Alerta de Stock
+## 🚨 Venta y Alerta de Stock
 
 ```mermaid
 sequenceDiagram
     actor U as Usuario
     participant UI as Frontend
     participant API as Backend
-    participant LLM as OpenAI
+    participant ALERTS as Microservicio Alertas
     participant DB as PostgreSQL
 
     U->>UI: Click "Simular Venta"
     UI->>API: POST /products/{id}/sell
-    API->>DB: UPDATE stock -= 1
+    API->>DB: UPDATE stock
     DB-->>API: ✅
     
     alt Stock < 10
-        API->>LLM: Genera alerta
-        LLM-->>API: Alerta formateada
-        API->>API: Log en consola
+        API->>ALERTS: POST /alerts
+        ALERTS->>DB: INSERT alerta
+        DB-->>ALERTS: ✅
+        ALERTS-->>API: ✅
     end
     
     API-->>UI: Nuevo stock
@@ -70,10 +83,11 @@ sequenceDiagram
 
 ```
 docker-compose.yml
-├── frontend (React)           :5173 / :80
-├── backend-principal (FastAPI) :8000
-├── microservicio-ia (FastAPI)  :8001
-└── postgres                    :5432
+├── frontend (React)              :5173 / :80
+├── backend-principal (FastAPI)   :8000
+├── microservicio-ia (FastAPI)    :8001
+├── microservicio-alertas (FastAPI) :8002
+└── postgres                      :5432
 ```
 
 ## � Base de Datos

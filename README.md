@@ -18,25 +18,30 @@ PoC de un sistema interno que automatiza la creación y enriquecimiento de catá
 ## 🏗️ Arquitectura
 
 ```
-┌─────────────┐      ┌──────────────────┐      ┌─────────────────┐
-│   React     │─────▶│  Backend         │─────▶│  Microservicio  │
-│   Frontend  │      │  Principal       │      │  IA (FastAPI)   │
-└─────────────┘      │  (FastAPI)       │      └────────┬────────┘
-                     └────────┬─────────┘               │
-                              │                         │
-                     ┌────────▼─────────┐      ┌────────▼────────┐
-                     │   PostgreSQL     │      │  OpenAI SDK     │
-                     │   Database       │      │  (LLM Calls)    │
-                     └──────────────────┘      └─────────────────┘
+┌─────────────┐      ┌──────────────────┐
+│   React     │─────▶│  Backend         │
+│   Frontend  │      │  Principal       │
+└─────────────┘      └────────┬─────────┘
+                              │
+                    ┌─────────┼─────────┐
+                    │         │         │
+            ┌───────▼──┐ ┌────▼─────┐ ┌▼──────────┐
+            │Microserv.│ │PostgreSQL│ │Microserv.│
+            │IA        │ │Database  │ │Alertas   │
+            └───────┬──┘ └──────────┘ └──────────┘
+                    │
+            ┌───────▼────────┐
+            │  OpenAI API    │
+            └────────────────┘
 ```
 
-**Tecnologías**:
+**Servicios**:
 - **Frontend**: React 18 + Vite
-- **Backend Principal**: FastAPI (Python 3.11+)
-- **Microservicio IA**: FastAPI (Python 3.11+)
-- **LLM**: OpenAI API / Gemini
+- **Backend Principal**: FastAPI (orquesta servicios)
+- **Microservicio IA**: FastAPI (genera descripciones/categorías)
+- **Microservicio Alertas**: FastAPI (gestiona alertas de stock)
 - **Base de Datos**: PostgreSQL 16
-- **Contenerización**: Docker + Docker Compose
+- **LLM**: OpenAI API
 
 ## 📚 Documentación
 
@@ -91,6 +96,7 @@ docker-compose logs -f
 # Health checks
 curl http://localhost:8000/health  # Backend Principal
 curl http://localhost:8001/health  # Microservicio IA
+curl http://localhost:8002/health  # Microservicio Alertas
 
 # Ver estado de servicios
 docker-compose ps
@@ -101,9 +107,10 @@ docker-compose ps
 | Servicio | URL | Credenciales |
 |----------|-----|--------------|
 | 🖥️ **Frontend (UI)** | http://localhost:5173 | - |
-| ⚙️ **Backend API Docs** | http://localhost:8000/docs | - |
-| 🤖 **Microservicio IA Docs** | http://localhost:8001/docs | - |
-| ️ **PostgreSQL** | localhost:5432 | postgres / postgres_password |
+| ⚙️ **Backend API** | http://localhost:8000/docs | - |
+| � **Microservicio IA** | http://localhost:8001/docs | - |
+| 🚨 **Microservicio Alertas** | http://localhost:8002/docs | - |
+| 🗄️ **PostgreSQL** | localhost:5432 | postgres / postgres_password |
 
 ## 🎯 Uso del Sistema
 
@@ -149,12 +156,10 @@ curl -X POST http://localhost:8000/products/{product_id}/sell
 # Detener todos los servicios
 docker-compose down
 
-# Detener y eliminar volúmenes (CUIDADO: borra la DB)
-docker-compose down -v
-
 # Ver logs de un servicio específico
 docker-compose logs -f backend-principal
 docker-compose logs -f microservicio-ia
+docker-compose logs -f microservicio-alertas
 
 # Reconstruir imágenes
 docker-compose build --no-cache
@@ -165,14 +170,9 @@ docker-compose restart backend-principal
 # Ejecutar comandos dentro de un contenedor
 docker-compose exec backend-principal sh
 docker-compose exec postgres psql -U postgres -d ecommerce_db
-
-# Ver recursos consumidos
-docker stats
 ```
 
-## 🧪 Testing
-
-### Health Checks
+## 🧪 Health Checks
 
 ```bash
 # Backend Principal
@@ -180,17 +180,9 @@ curl http://localhost:8000/health
 
 # Microservicio IA
 curl http://localhost:8001/health
-```
 
-### Tests Automatizados
-
-```bash
-# Entrar al contenedor del backend
-docker-compose exec backend-principal sh
-
-# Ejecutar tests
-pytest tests/ -v
-pytest tests/test_products.py -v
+# Microservicio Alertas
+curl http://localhost:8002/health
 ```
 
 ##  Troubleshooting
@@ -206,6 +198,16 @@ docker-compose exec microservicio-ia env | grep OPENAI_API_KEY
 
 # Reiniciar el servicio
 docker-compose restart microservicio-ia
+```
+
+### Problema: "Alertas no se generan"
+
+```bash
+# Verificar logs del microservicio de alertas
+docker-compose logs -f microservicio-alertas
+
+# Reiniciar el servicio
+docker-compose restart microservicio-alertas
 ```
 
 ### Problema: "Error conectando a la base de datos"
@@ -251,8 +253,9 @@ OPENAI_MODEL=gpt-3.5-turbo
 Todos los servicios generan logs en formato JSON:
 
 ```bash
-docker-compose logs -f backend-principal | grep "product_created"
-docker-compose logs -f microservicio-ia | grep "llm_request"
+docker-compose logs -f backend-principal | grep "product"
+docker-compose logs -f microservicio-ia | grep "generate"
+docker-compose logs -f microservicio-alertas | grep "alert"
 ```
 
 ### Health Checks
@@ -261,6 +264,7 @@ docker-compose logs -f microservicio-ia | grep "llm_request"
 # Verificar estado de todos los servicios
 curl http://localhost:8000/health | jq
 curl http://localhost:8001/health | jq
+curl http://localhost:8002/health | jq
 ```
 
 ## 🤝 Contribución
