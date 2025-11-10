@@ -58,9 +58,9 @@ services:
     restart: unless-stopped
     environment:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-3.5-turbo}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5-mini-2025-08-07}
       GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
-      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-1.5-flash}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-flash-latest}
       PORT: 8002
       LOG_LEVEL: ${LOG_LEVEL:-info}
       MOCK_PRICE_URL: ${MOCK_PRICE_URL:-https://dummyjson.com/products/1}

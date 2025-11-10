@@ -230,12 +230,6 @@ Verificar en `.env`:
 ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
 ```
 
-### Problema: "La IA está muy lenta"
-
-- OpenAI puede tardar 5-10 segundos en generar contenido
-- Considera usar `gpt-3.5-turbo` en lugar de `gpt-4` para mayor velocidad:
-```env
-OPENAI_MODEL=gpt-3.5-turbo
 ```
 
 ## 📈 Métricas y Observabilidad
