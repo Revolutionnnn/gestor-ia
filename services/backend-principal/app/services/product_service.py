@@ -1,8 +1,15 @@
+import asyncio
 from typing import List
 
+import httpx
 from sqlalchemy.orm import Session
 
-from ..config import logger
+from ..config import (
+    ALERTS_SERVICE_URL,
+    ALERTS_WEBHOOK_TIMEOUT,
+    LOW_STOCK_THRESHOLD,
+    logger,
+)
 from ..models import Product
 from ..schemas import ProductCreate
 from .ia_client import generate_category, generate_description
@@ -44,7 +51,7 @@ class ProductService:
     def list_products(self) -> List[Product]:
         return self.db.query(Product).all()
 
-    def sell_product(self, product: Product) -> Product:
+    async def sell_product(self, product: Product) -> Product:
         if product.stock <= 0:
             from fastapi import HTTPException, status
 
@@ -63,9 +70,52 @@ class ProductService:
             new_stock=product.stock,
         )
 
+        # Verificar y enviar alerta de stock bajo en segundo plano
+        if self.needs_stock_alert(product):
+            asyncio.create_task(self._send_stock_alert(product))
+
         return product
 
     def needs_stock_alert(self, product: Product) -> bool:
-        from ..constants import LOW_STOCK_THRESHOLD
-
         return product.stock < LOW_STOCK_THRESHOLD
+
+    async def _send_stock_alert(self, product: Product) -> None:
+        """
+        Envía una alerta al microservicio de alertas cuando el stock es bajo.
+        
+        Args:
+            product: Producto con stock bajo
+        """
+        try:
+            webhook_url = f"{ALERTS_SERVICE_URL}/webhook/stock-alert"
+            payload = {
+                "product_id": str(product.id),
+                "product_name": product.name,
+                "current_stock": product.stock,
+            }
+
+            logger.info(
+                "sending_stock_alert",
+                product_id=str(product.id),
+                webhook_url=webhook_url,
+            )
+
+            async with httpx.AsyncClient(
+                timeout=ALERTS_WEBHOOK_TIMEOUT
+            ) as client:
+                response = await client.post(webhook_url, json=payload)
+                response.raise_for_status()
+
+            logger.info(
+                "stock_alert_sent",
+                product_id=str(product.id),
+                response_status=response.status_code,
+            )
+
+        except Exception as e:
+            # Log del error pero no falla la venta
+            logger.error(
+                "stock_alert_error",
+                product_id=str(product.id),
+                error=str(e),
+            )

@@ -19,3 +19,9 @@ ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(
     ","
 )
 PORT = int(os.getenv("PORT", 8000))
+LOW_STOCK_THRESHOLD = int(os.getenv("LOW_STOCK_THRESHOLD", 10))
+ALERTS_SERVICE_URL = os.getenv(
+    "ALERTS_SERVICE_URL",
+    "http://microservicio-alertas:8002",
+)
+ALERTS_WEBHOOK_TIMEOUT = int(os.getenv("ALERTS_WEBHOOK_TIMEOUT", 10))

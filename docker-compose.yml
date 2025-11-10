@@ -50,6 +50,35 @@ services:
     depends_on:
       - postgres
 
+  microservicio-alertas:
+    build:
+      context: ./services/microservicio-alertas
+      dockerfile: Dockerfile
+    container_name: microservicio-alertas
+    restart: unless-stopped
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-3.5-turbo}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-1.5-flash}
+      PORT: 8002
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      MOCK_PRICE_URL: ${MOCK_PRICE_URL:-https://dummyjson.com/products/1}
+      REQUEST_TIMEOUT: ${REQUEST_TIMEOUT:-10}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:8000}
+    ports:
+      - "${ALERTS_SERVICE_PORT:-8002}:8002"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      - postgres
+
   backend-principal:
     build:
       context: ./services/backend-principal
@@ -61,10 +90,12 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
       IA_SERVICE_URL: http://microservicio-ia:8001
+      ALERTS_SERVICE_URL: http://microservicio-alertas:8002
       PORT: 8000
       LOG_LEVEL: ${LOG_LEVEL:-info}
       LOW_STOCK_THRESHOLD: ${LOW_STOCK_THRESHOLD:-10}
       TIMEOUT_IA_SERVICE: ${TIMEOUT_IA_SERVICE:-35}
+      ALERTS_WEBHOOK_TIMEOUT: ${ALERTS_WEBHOOK_TIMEOUT:-10}
       TIMEOUT_WEBHOOK: ${TIMEOUT_WEBHOOK:-10}
       TIMEOUT_DB: ${TIMEOUT_DB:-5}
       MAX_RETRIES: ${MAX_RETRIES:-3}
@@ -83,6 +114,8 @@ services:
       postgres:
         condition: service_healthy
       microservicio-ia:
+        condition: service_healthy
+      microservicio-alertas:
         condition: service_healthy
 
   frontend:

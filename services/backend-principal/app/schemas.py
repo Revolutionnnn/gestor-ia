@@ -33,7 +33,6 @@ class SellResponse(BaseModel):
     id: uuid.UUID
     name: str
     stock: int
-    low_stock_alert_sent: bool
 
 
 class HealthResponse(BaseModel):
