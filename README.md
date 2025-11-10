@@ -77,7 +77,7 @@ nano .env  # o vim, code, etc.
 
 **IMPORTANTE**: Configurar al menos:
 ```env
-OPENAI_API_KEY=sk-your-actual-api-key-here
+GOOGLE_API_KEY=sk-your-actual-api-key-here
 ```
 
 ### 3. Levantar el Sistema Completo
