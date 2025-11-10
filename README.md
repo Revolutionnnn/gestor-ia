@@ -238,14 +238,6 @@ ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
 OPENAI_MODEL=gpt-3.5-turbo
 ```
 
-## 🔐 Seguridad
-
-⚠️ **IMPORTANTE - Este es un PoC**:
-
-- ❌ No hay autenticación de usuarios
-- ❌ No usar en producción sin hardening
-- ❌ API keys expuestas en .env (usar secrets manager en prod)
-
 ## 📈 Métricas y Observabilidad
 
 ### Logs Estructurados
