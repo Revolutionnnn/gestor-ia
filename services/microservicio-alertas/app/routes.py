@@ -1,4 +1,3 @@
-"""Rutas del microservicio de alertas."""
 from fastapi import APIRouter, HTTPException, status
 
 from .config import logger
