@@ -33,9 +33,3 @@ CREATE TRIGGER update_products_updated_at
     BEFORE UPDATE ON products
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
-
--- Datos de Prueba
-INSERT INTO products (name, keywords, stock, description, category) VALUES
-('Laptop Dell', '["laptop", "dell", "intel"]'::jsonb, 50, 'Laptop profesional', 'Electrónica > Laptops'),
-('Mouse Logitech', '["mouse", "inalámbrico", "negro"]'::jsonb, 25, 'Mouse inalámbrico', 'Electrónica > Accesorios'),
-('Teclado Mecánico', '["teclado", "mecánico", "rgb"]'::jsonb, 15, 'Teclado gaming', 'Electrónica > Periféricos');
