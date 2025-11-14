@@ -61,6 +61,14 @@ CREATE TRIGGER update_users_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+-- Usuario administrador inicial
+-- Email: admin@pruebas.com
+-- Password: pruebas-2025
+-- Hash generado con bcrypt
+INSERT INTO users (email, full_name, hashed_password, role) VALUES
+('admin@pruebas.com', 'Administrador', '$2b$12$aGvMAie14.Da643hrPDfu.fA9MzmXaphMidl3WZZwnAZCXw/.efsK', 'admin')
+ON CONFLICT (email) DO NOTHING;
+
 -- Datos de prueba
 INSERT INTO products (name, keywords, stock, price, description, category, image_url, is_active) VALUES
 ('Laptop Dell XPS 15', '["laptop", "dell", "intel", "profesional"]'::jsonb, 50, 1299, 'Laptop profesional de alto rendimiento', 'Electrónica', 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=500', TRUE),

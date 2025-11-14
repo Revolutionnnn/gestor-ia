@@ -16,7 +16,7 @@ async def verify_token(token: str) -> dict | None:
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
             response = await client.get(
-                f"{AUTH_SERVICE_URL}/verify",
+                f"{AUTH_SERVICE_URL}/auth/verify",
                 headers={"Authorization": f"Bearer {token}"}
             )
             

@@ -6,34 +6,32 @@ const emptyTemplate = {
   price: '',
   stock: '',
   category: '',
-  tags: '',
-  status: 'Publicado',
-  cover: '',
-  highlight: false
+  keywords: '',
+  image_url: '',
+  is_active: true
 };
 
 const normalizePayload = (formValues) => {
-  const tagsArray = formValues.tags
-    ? formValues.tags.split(',').map((tag) => tag.trim()).filter(Boolean)
+  const keywordsArray = formValues.keywords
+    ? formValues.keywords.split(',').map((kw) => kw.trim()).filter(Boolean)
     : [];
 
   return {
     name: formValues.name.trim(),
-    description: formValues.description.trim(),
-    price: Number.parseFloat(formValues.price) || 0,
+    keywords: keywordsArray,
     stock: Number.parseInt(formValues.stock, 10) || 0,
-    category: formValues.category.trim(),
-    tags: tagsArray,
-    status: formValues.status,
-    cover: formValues.cover.trim(),
-    highlight: Boolean(formValues.highlight)
+    price: Number.parseInt(formValues.price, 10) || 0,
+    description: formValues.description?.trim() || null,
+    category: formValues.category?.trim() || null,
+    image_url: formValues.image_url?.trim() || null,
+    is_active: Boolean(formValues.is_active)
   };
 };
 
 const AdminProductForm = ({ title, submitLabel, onSubmit, initialData, onCancel }) => {
   const [formValues, setFormValues] = useState(
     initialData
-      ? { ...initialData, tags: Array.isArray(initialData.tags) ? initialData.tags.join(', ') : '' }
+      ? { ...initialData, keywords: Array.isArray(initialData.keywords) ? initialData.keywords.join(', ') : '' }
       : emptyTemplate
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -42,7 +40,7 @@ const AdminProductForm = ({ title, submitLabel, onSubmit, initialData, onCancel 
     if (initialData) {
       setFormValues({
         ...initialData,
-        tags: Array.isArray(initialData.tags) ? initialData.tags.join(', ') : ''
+        keywords: Array.isArray(initialData.keywords) ? initialData.keywords.join(', ') : ''
       });
     } else {
       setFormValues(emptyTemplate);
@@ -85,16 +83,17 @@ const AdminProductForm = ({ title, submitLabel, onSubmit, initialData, onCancel 
             required
           />
         </label>
-        <label>
-          <span>Categoría</span>
+        <label className="full-row">
+          <span>Palabras clave (separadas por coma)</span>
           <input
-            name="category"
+            name="keywords"
             type="text"
-            placeholder="Ej. Audio"
-            value={formValues.category}
+            placeholder="laptop, tecnología, profesional"
+            value={formValues.keywords}
             onChange={handleChange}
             required
           />
+          <small>La IA usará estas palabras para generar la descripción si no la proporcionas</small>
         </label>
         <label>
           <span>Precio (USD)</span>
@@ -102,8 +101,8 @@ const AdminProductForm = ({ title, submitLabel, onSubmit, initialData, onCancel 
             name="price"
             type="number"
             min="0"
-            step="0.01"
-            placeholder="0.00"
+            step="1"
+            placeholder="0"
             value={formValues.price}
             onChange={handleChange}
             required
@@ -122,52 +121,45 @@ const AdminProductForm = ({ title, submitLabel, onSubmit, initialData, onCancel 
           />
         </label>
         <label className="full-row">
-          <span>Descripción</span>
+          <span>Descripción (opcional)</span>
           <textarea
             name="description"
-            placeholder="Agrega un copy breve y atractivo"
-            value={formValues.description}
+            placeholder="Deja vacío para que la IA genere una descripción automática"
+            value={formValues.description || ''}
             onChange={handleChange}
             rows={3}
-            required
           />
+          <small>Si no la proporcionas, la IA la generará basándose en el nombre y palabras clave</small>
         </label>
-        <label className="full-row">
-          <span>Etiquetas (separadas por coma)</span>
+        <label>
+          <span>Categoría (opcional)</span>
           <input
-            name="tags"
+            name="category"
             type="text"
-            placeholder="Bluetooth, ANC, Carga rápida"
-            value={formValues.tags}
+            placeholder="Deja vacío para generación automática"
+            value={formValues.category || ''}
             onChange={handleChange}
           />
+          <small>La IA puede sugerir una categoría automáticamente</small>
         </label>
         <label>
-          <span>Estado</span>
-          <select name="status" value={formValues.status} onChange={handleChange}>
-            <option value="Publicado">Publicado</option>
-            <option value="Borrador">Borrador</option>
-            <option value="Archivado">Archivado</option>
-          </select>
-        </label>
-        <label>
-          <span>Imagen destacada (URL)</span>
+          <span>Imagen URL (opcional)</span>
           <input
-            name="cover"
+            name="image_url"
             type="url"
             placeholder="https://..."
-            value={formValues.cover}
+            value={formValues.image_url || ''}
             onChange={handleChange}
           />
         </label>
         <label className="toggle">
           <input
-            name="highlight"
+            name="is_active"
             type="checkbox"
-            checked={formValues.highlight}
+            checked={formValues.is_active}
             onChange={handleChange}
           />
-          <span>Destacar en la vista pública</span>
+          <span>Producto activo (visible en catálogo público)</span>
         </label>
       </div>
       <div className="form-actions">

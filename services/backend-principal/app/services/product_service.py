@@ -33,8 +33,10 @@ class ProductService:
             name=product_data.name,
             keywords=product_data.keywords,
             stock=product_data.stock,
+            price=product_data.price,
             description=description,
             category=category,
+            image_url=product_data.image_url,
             is_active=product_data.is_active,
         )
 

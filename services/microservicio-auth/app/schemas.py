@@ -20,6 +20,7 @@ class UserLogin(BaseModel):
 
 class UserRead(UserBase):
     id: UUID
+    role: str = "user"
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

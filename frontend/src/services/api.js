@@ -134,8 +134,8 @@ export const authApi = {
     });
     
     // Guardar token y usuario
-    if (response.access_token) {
-      setToken(response.access_token);
+    if (response.token?.access_token) {
+      setToken(response.token.access_token);
     }
     if (response.user) {
       setUser(response.user);
@@ -155,8 +155,8 @@ export const authApi = {
     });
     
     // Guardar token y usuario
-    if (response.access_token) {
-      setToken(response.access_token);
+    if (response.token?.access_token) {
+      setToken(response.token.access_token);
     }
     if (response.user) {
       setUser(response.user);

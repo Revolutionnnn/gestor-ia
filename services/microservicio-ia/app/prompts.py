@@ -6,7 +6,7 @@ Nombre del Producto: {product_name}
 Características Clave: {keywords_str}
 
 La descripción debe:
-- Tener entre 50-100 palabras
+- Tener entre 10-25 palabras
 - Resaltar beneficios, no solo características técnicas
 - Usar lenguaje persuasivo y emocional
 - Incluir un call-to-action sutil

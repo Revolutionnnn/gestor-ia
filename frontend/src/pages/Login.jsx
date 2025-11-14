@@ -50,7 +50,7 @@ const Login = ({ onLogin, isAuthenticated }) => {
             <input
               type="email"
               name="email"
-              placeholder="admin@neostore.com"
+              placeholder="admin@pruebas.com"
               value={formValues.email}
               onChange={handleChange}
               required
@@ -74,7 +74,7 @@ const Login = ({ onLogin, isAuthenticated }) => {
         </form>
         <div className="login-hint">
           <p>Demo rápida:</p>
-          <code>admin@neostore.com / neostore-2025</code>
+          <code>admin@pruebas.com / pruebas-2025</code>
         </div>
       </section>
     </div>
