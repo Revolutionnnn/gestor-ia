@@ -79,6 +79,36 @@ services:
     depends_on:
       - postgres
 
+  microservicio-auth:
+    build:
+      context: ./services/microservicio-auth
+      dockerfile: Dockerfile
+    container_name: microservicio-auth
+    restart: unless-stopped
+    environment:
+      AUTH_DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres_password}@postgres:5432/${POSTGRES_DB:-ecommerce_db}
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-change-me}
+      AUTH_JWT_ALGORITHM: ${AUTH_JWT_ALGORITHM:-HS256}
+      AUTH_ACCESS_TOKEN_EXPIRE_MINUTES: ${AUTH_ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      AUTH_REFRESH_TOKEN_EXPIRE_MINUTES: ${AUTH_REFRESH_TOKEN_EXPIRE_MINUTES:-10080}
+      AUTH_PASSWORD_MIN_LENGTH: ${AUTH_PASSWORD_MIN_LENGTH:-8}
+      PORT: 8003
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:8000}
+    ports:
+      - "${AUTH_SERVICE_PORT:-8003}:8003"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   backend-principal:
     build:
       context: ./services/backend-principal

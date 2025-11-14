@@ -40,6 +40,7 @@ PoC de un sistema interno que automatiza la creación y enriquecimiento de catá
 - **Backend Principal**: FastAPI (orquesta servicios)
 - **Microservicio IA**: FastAPI (genera descripciones/categorías)
 - **Microservicio Alertas**: FastAPI (gestiona alertas de stock)
+- **Microservicio Auth**: FastAPI (registro y login desacoplados)
 - **Base de Datos**: PostgreSQL 16
 - **LLM**: OpenAI API
 
@@ -110,7 +111,8 @@ docker-compose ps
 | ⚙️ **Backend API** | http://localhost:8000/docs | - |
 | � **Microservicio IA** | http://localhost:8001/docs | - |
 | 🚨 **Microservicio Alertas** | http://localhost:8002/docs | - |
-| 🗄️ **PostgreSQL** | localhost:5432 | postgres / postgres_password |
+| � **Microservicio Auth** | http://localhost:8003/docs | Registro/Login |
+| �🗄️ **PostgreSQL** | localhost:5432 | postgres / postgres_password |
 
 ## 🎯 Uso del Sistema
 
@@ -150,6 +152,27 @@ curl http://localhost:8000/products
 curl -X POST http://localhost:8000/products/{product_id}/sell
 ```
 
+### Flujo de Autenticación Minimal
+
+```bash
+# Registrar usuario
+curl -X POST http://localhost:8003/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "admin@example.com",
+    "password": "S3gura#123",
+    "full_name": "Admin Demo"
+  }'
+
+# Login
+curl -X POST http://localhost:8003/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "admin@example.com",
+    "password": "S3gura#123"
+  }'
+```
+
 ## 🐳 Comandos Docker Útiles
 
 ```bash
@@ -183,6 +206,9 @@ curl http://localhost:8001/health
 
 # Microservicio Alertas
 curl http://localhost:8002/health
+
+# Microservicio Auth
+curl http://localhost:8003/health
 ```
 
 ##  Troubleshooting
