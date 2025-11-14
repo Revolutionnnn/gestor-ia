@@ -41,6 +41,10 @@ a {
   padding-top: 7rem;
 }
 
+.page-wrapper--full {
+  padding-top: 3rem;
+}
+
 .top-nav {
   position: sticky;
   top: 0;
@@ -99,6 +103,10 @@ a {
 .nav-actions {
   display: flex;
   gap: 0.75rem;
+}
+
+.nav-spacer {
+  flex: 1;
 }
 
 .primary-btn,
@@ -180,6 +188,19 @@ a {
   display: flex;
   flex-direction: column;
   gap: 2rem;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.5rem;
+}
+
+.page-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .hero {

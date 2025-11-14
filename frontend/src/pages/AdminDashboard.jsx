@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AdminProductForm from '../components/AdminProductForm.jsx';
 
-const AdminDashboard = ({ products, onCreate, onUpdate, onDelete }) => {
+const AdminDashboard = ({ products, onCreate, onUpdate, onDelete, onLogout }) => {
+  const navigate = useNavigate();
   const [editingProduct, setEditingProduct] = useState(null);
 
   const handleDelete = (product) => {
@@ -35,6 +37,14 @@ const AdminDashboard = ({ products, onCreate, onUpdate, onDelete }) => {
           <p className="eyebrow">Inventario en tiempo real</p>
           <h1>Panel administrativo</h1>
           <p className="muted">Crea, actualiza o depura tu catálogo desde un único lugar.</p>
+        </div>
+        <div className="page-header__actions">
+          <button type="button" className="ghost-btn" onClick={() => navigate('/')}>
+            Ver catálogo público
+          </button>
+          <button type="button" className="ghost-btn" onClick={onLogout}>
+            Cerrar sesión
+          </button>
         </div>
       </section>
 

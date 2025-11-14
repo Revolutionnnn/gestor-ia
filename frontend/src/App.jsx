@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import './App.css';
 import TopNav from './components/TopNav.jsx';
@@ -72,6 +72,7 @@ const bootstrapProducts = () => {
 function App() {
   const [products, setProducts] = useState(bootstrapProducts);
   const [session, setSession] = useState(() => loadFromStorage(SESSION_STORAGE_KEY, null));
+  const location = useLocation();
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -126,10 +127,13 @@ function App() {
     setProducts((prev) => prev.filter((product) => product.id !== productId));
   };
 
+  const isAdminRoute = location.pathname.startsWith('/admin');
+  const showPublicNav = !isAdminRoute;
+
   return (
     <div className="app-shell">
-      <TopNav isAuthenticated={isAuthenticated} onLogout={handleLogout} />
-      <main className="page-wrapper">
+      {showPublicNav && <TopNav isAuthenticated={isAuthenticated} />}
+      <main className={`page-wrapper${showPublicNav ? '' : ' page-wrapper--full'}`}>
         <Routes>
           <Route path="/" element={<PublicCatalog products={products} />} />
           <Route
@@ -145,6 +149,7 @@ function App() {
                   onCreate={handleCreateProduct}
                   onUpdate={handleUpdateProduct}
                   onDelete={handleDeleteProduct}
+                  onLogout={handleLogout}
                 />
               </ProtectedRoute>
             )}
