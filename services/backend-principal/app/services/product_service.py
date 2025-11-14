@@ -6,9 +6,9 @@ from sqlalchemy.orm import Session
 
 from ..config import (ALERTS_SERVICE_URL, ALERTS_WEBHOOK_TIMEOUT,
                       LOW_STOCK_THRESHOLD, logger)
+from ..infraestructure.ia_client import generate_category, generate_description
 from ..models import Product
 from ..schemas import ProductCreate
-from .ia_client import generate_category, generate_description
 
 
 class ProductService:
