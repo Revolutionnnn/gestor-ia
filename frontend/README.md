@@ -1,16 +1,38 @@
-# React + Vite
+## NeoStore Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Interfaz React + Vite para un ecommerce minimalista con tres vistas clave: catálogo público, login protegido y panel administrativo con CRUD mockeado. Toda la información de productos vive en el cliente y se guarda en `localStorage` para permitir iteraciones rápidas sin depender de la API.
 
-Currently, two official plugins are available:
+### Características
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- 🎯 **Catálogo público** con buscador, filtro por categoría y tarjetas destacadas.
+- 🔐 **Login privado** que protege la vista administrativa.
+- 🧩 **Panel admin** para crear, editar y eliminar productos usando estado local.
+- 💾 **Persistencia local** automática para productos y sesión.
 
-## React Compiler
+### Scripts disponibles
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm install      # instala dependencias
+npm run dev      # levanta Vite en modo desarrollo
+npm run build    # genera build de producción
+npm run preview  # sirve la build generada
+```
 
-## Expanding the ESLint configuration
+### Credenciales demo
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- **Email:** `admin@neostore.com`
+- **Contraseña:** `neostore-2025`
+
+Puedes cambiarlas en `src/App.jsx` dentro de la constante `ADMIN_CREDENTIALS`.
+
+### Estructura principal
+
+- `src/pages` → vistas (`PublicCatalog`, `Login`, `AdminDashboard`).
+- `src/components` → navegación, formularios y tarjetas reutilizables.
+- `src/data/initialProducts.js` → productos semilla que se cargan al primer inicio.
+
+### Próximos pasos sugeridos
+
+1. Conectar las acciones del panel con la API real (microservicio de productos).
+2. Reemplazar el login mock por el flujo del microservicio `auth`.
+3. Añadir tests de integración para los formularios y rutas.
