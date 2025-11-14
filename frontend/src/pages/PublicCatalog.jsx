@@ -1,9 +1,31 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import ProductCard from '../components/ProductCard.jsx';
+import api from '../services/api.js';
 
-const PublicCatalog = ({ products }) => {
+const PublicCatalog = () => {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await api.products.listPublic();
+        setProducts(data);
+      } catch (err) {
+        console.error('Error fetching products:', err);
+        setError('No se pudieron cargar los productos');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   const categories = useMemo(() => {
     const unique = new Set(products.map((product) => product.category));
@@ -18,6 +40,26 @@ const PublicCatalog = ({ products }) => {
       return matchesSearch && matchesCategory;
     });
   }, [products, searchTerm, selectedCategory]);
+
+  if (loading) {
+    return (
+      <div className="page page-public">
+        <div style={{ padding: '2rem', textAlign: 'center' }}>
+          <p>Cargando productos...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="page page-public">
+        <div style={{ padding: '2rem', textAlign: 'center', color: 'red' }}>
+          <p>{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page page-public">

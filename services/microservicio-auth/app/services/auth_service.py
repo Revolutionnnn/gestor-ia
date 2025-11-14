@@ -1,10 +1,11 @@
-from fastapi import HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from .. import models, schemas
 from ..config import PASSWORD_MIN_LENGTH, logger
-from ..security import create_access_token, hash_password, verify_password
+from ..database import get_db
+from ..security import create_access_token, decode_token, hash_password, verify_password
 
 
 def _normalize_email(email: str) -> str:
@@ -73,3 +74,62 @@ def login_user(
         user=schemas.UserRead.model_validate(user),
         token=schemas.Token(access_token=token, expires_in=expires_in),
     )
+
+
+def get_current_user_from_token(
+    authorization: str = Header(None),
+    db: Session = Depends(get_db),
+) -> dict:
+    """
+    Extrae y valida el token JWT del header Authorization.
+    Retorna los datos del usuario autenticado.
+    """
+    if not authorization:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No se proporcionó token de autenticación",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    try:
+        scheme, token = authorization.split()
+        if scheme.lower() != "bearer":
+            raise ValueError("Esquema inválido")
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Formato de token inválido. Use: Bearer <token>",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    payload = decode_token(token)
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido o expirado",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    user_id = payload.get("sub")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuario no encontrado",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return {
+        "user_id": str(user.id),
+        "username": user.email,
+        "email": user.email,
+        "full_name": user.full_name,
+        "role": user.role,
+    }

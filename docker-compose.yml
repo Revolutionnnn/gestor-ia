@@ -12,7 +12,7 @@ services:
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./init-db.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     networks:
       - app-network
     healthcheck:
@@ -121,6 +121,7 @@ services:
       GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
       IA_SERVICE_URL: http://microservicio-ia:8001
       ALERTS_SERVICE_URL: http://microservicio-alertas:8002
+      AUTH_SERVICE_URL: http://microservicio-auth:8003
       PORT: 8000
       LOG_LEVEL: ${LOG_LEVEL:-info}
       LOW_STOCK_THRESHOLD: ${LOW_STOCK_THRESHOLD:-10}
@@ -146,6 +147,8 @@ services:
       microservicio-ia:
         condition: service_healthy
       microservicio-alertas:
+        condition: service_healthy
+      microservicio-auth:
         condition: service_healthy
 
   frontend:

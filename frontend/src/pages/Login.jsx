@@ -18,16 +18,23 @@ const Login = ({ onLogin, isAuthenticated }) => {
     setFormValues((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     setIsSubmitting(true);
     setError('');
-    const result = onLogin(formValues);
-    setIsSubmitting(false);
-    if (result.success) {
-      navigate('/admin', { replace: true });
-    } else {
-      setError(result.message);
+    
+    try {
+      const result = await onLogin(formValues);
+      
+      if (result.success) {
+        navigate('/admin', { replace: true });
+      } else {
+        setError(result.message || 'Error al iniciar sesión');
+      }
+    } catch {
+      setError('Error de conexión. Intenta de nuevo.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

@@ -1,14 +1,16 @@
 import asyncio
 from typing import List
+from uuid import UUID
 
 import httpx
+from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from ..config import (ALERTS_SERVICE_URL, ALERTS_WEBHOOK_TIMEOUT,
                       LOW_STOCK_THRESHOLD, logger)
 from ..infraestructure.ia_client import generate_category, generate_description
 from ..models import Product
-from ..schemas import ProductCreate
+from ..schemas import ProductCreate, ProductUpdate
 
 
 class ProductService:
@@ -18,11 +20,14 @@ class ProductService:
     async def create_product(self, product_data: ProductCreate) -> Product:
         logger.info("create_product_request", name=product_data.name)
 
-        description = await generate_description(
+        description = product_data.description or await generate_description(
             product_data.name,
             product_data.keywords,
         )
-        category = await generate_category(product_data.name, description)
+        category = product_data.category or await generate_category(
+            product_data.name, 
+            description
+        )
 
         db_product = Product(
             name=product_data.name,
@@ -30,6 +35,7 @@ class ProductService:
             stock=product_data.stock,
             description=description,
             category=category,
+            is_active=product_data.is_active,
         )
 
         self.db.add(db_product)
@@ -44,8 +50,92 @@ class ProductService:
 
         return db_product
 
-    def list_products(self) -> List[Product]:
+    def list_products_public(self) -> List[Product]:
+        """Lista solo productos activos para el público."""
+        return self.db.query(Product).filter(Product.is_active == True).all()
+
+    def list_products_admin(self) -> List[Product]:
+        """Lista todos los productos (activos e inactivos) para admin."""
         return self.db.query(Product).all()
+
+    def get_product_by_id(self, product_id: UUID) -> Product:
+        """Obtiene un producto por ID (admin puede ver cualquiera)."""
+        product = self.db.query(Product).filter(Product.id == product_id).first()
+        if not product:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Producto no encontrado",
+            )
+        return product
+
+    def get_product_public(self, product_id: UUID) -> Product:
+        """Obtiene un producto activo para el público."""
+        product = (
+            self.db.query(Product)
+            .filter(Product.id == product_id, Product.is_active == True)
+            .first()
+        )
+        if not product:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Producto no encontrado o no disponible",
+            )
+        return product
+
+    async def update_product(
+        self, 
+        product_id: UUID, 
+        product_data: ProductUpdate
+    ) -> Product:
+        """Actualiza un producto (solo admin)."""
+        product = self.get_product_by_id(product_id)
+
+        update_data = product_data.model_dump(exclude_unset=True)
+        
+        # Si se actualiza nombre o keywords y no se proporciona descripción,
+        # regenerar descripción
+        if ("name" in update_data or "keywords" in update_data) and "description" not in update_data:
+            new_name = update_data.get("name", product.name)
+            new_keywords = update_data.get("keywords", product.keywords)
+            update_data["description"] = await generate_description(
+                new_name, 
+                new_keywords
+            )
+        
+        # Si se actualiza descripción, regenerar categoría
+        if "description" in update_data:
+            new_name = update_data.get("name", product.name)
+            update_data["category"] = await generate_category(
+                new_name, 
+                update_data["description"]
+            )
+
+        for field, value in update_data.items():
+            setattr(product, field, value)
+
+        self.db.commit()
+        self.db.refresh(product)
+
+        logger.info(
+            "product_updated",
+            product_id=str(product.id),
+            updated_fields=list(update_data.keys()),
+        )
+
+        return product
+
+    def delete_product(self, product_id: UUID) -> None:
+        """Elimina un producto (solo admin)."""
+        product = self.get_product_by_id(product_id)
+        
+        self.db.delete(product)
+        self.db.commit()
+
+        logger.info(
+            "product_deleted",
+            product_id=str(product.id),
+            name=product.name,
+        )
 
     async def sell_product(self, product: Product) -> Product:
         if product.stock <= 0:

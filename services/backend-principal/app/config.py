@@ -25,3 +25,7 @@ ALERTS_SERVICE_URL = os.getenv(
     "http://microservicio-alertas:8002",
 )
 ALERTS_WEBHOOK_TIMEOUT = int(os.getenv("ALERTS_WEBHOOK_TIMEOUT", 10))
+AUTH_SERVICE_URL = os.getenv(
+    "AUTH_SERVICE_URL",
+    "http://microservicio-auth:8001",
+)

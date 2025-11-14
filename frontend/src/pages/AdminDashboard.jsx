@@ -1,20 +1,83 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminProductForm from '../components/AdminProductForm.jsx';
+import api from '../services/api.js';
 
-const AdminDashboard = ({ products, onCreate, onUpdate, onDelete, onLogout }) => {
+const AdminDashboard = ({ onLogout }) => {
   const navigate = useNavigate();
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [editingProduct, setEditingProduct] = useState(null);
 
-  const handleDelete = (product) => {
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await api.productsAdmin.listAll();
+      setProducts(data);
+    } catch (err) {
+      console.error('Error fetching products:', err);
+      setError('No se pudieron cargar los productos');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreate = async (productData) => {
+    try {
+      await api.productsAdmin.create(productData);
+      await fetchProducts();
+    } catch (err) {
+      console.error('Error creating product:', err);
+      alert('Error al crear el producto');
+    }
+  };
+
+  const handleUpdate = async (productId, productData) => {
+    try {
+      await api.productsAdmin.update(productId, productData);
+      await fetchProducts();
+      setEditingProduct(null);
+    } catch (err) {
+      console.error('Error updating product:', err);
+      alert('Error al actualizar el producto');
+    }
+  };
+
+  const handleDelete = async (product) => {
     const confirmation = typeof window === 'undefined'
       ? true
       : window.confirm(`¿Eliminar "${product.name}" del catálogo?`);
     if (confirmation) {
-      onDelete(product.id);
-      if (editingProduct?.id === product.id) {
-        setEditingProduct(null);
+      try {
+        await api.productsAdmin.delete(product.id);
+        await fetchProducts();
+        if (editingProduct?.id === product.id) {
+          setEditingProduct(null);
+        }
+      } catch (err) {
+        console.error('Error deleting product:', err);
+        alert('Error al eliminar el producto');
       }
+    }
+  };
+
+  const handleToggleActive = async (product) => {
+    try {
+      if (product.is_active) {
+        await api.productsAdmin.deactivate(product.id);
+      } else {
+        await api.productsAdmin.activate(product.id);
+      }
+      await fetchProducts();
+    } catch (err) {
+      console.error('Error toggling product status:', err);
+      alert('Error al cambiar el estado del producto');
     }
   };
 
@@ -75,7 +138,7 @@ const AdminDashboard = ({ products, onCreate, onUpdate, onDelete, onLogout }) =>
           </div>
           <AdminProductForm
             submitLabel="Crear producto"
-            onSubmit={onCreate}
+            onSubmit={handleCreate}
           />
         </section>
 
@@ -84,40 +147,57 @@ const AdminDashboard = ({ products, onCreate, onUpdate, onDelete, onLogout }) =>
             <h2>Productos publicados</h2>
             <p className="muted">Gestiona existencias, edita o elimina registros.</p>
           </div>
-          <div className="admin-table">
-            <div className="admin-table__head">
-              <span>Producto</span>
-              <span>Stock</span>
-              <span>Estado</span>
-              <span>Acciones</span>
+          {loading ? (
+            <div style={{ padding: '2rem', textAlign: 'center' }}>
+              <p>Cargando productos...</p>
             </div>
-            {products.map((product) => (
-              <div key={product.id} className="admin-table__row">
-                <div>
-                  <p className="table-title">{product.name}</p>
-                  <span className="muted">{product.category}</span>
-                </div>
-                <span>{product.stock} uds.</span>
-                <span className={`status-pill status-${product.status?.toLowerCase()}`}>
-                  {product.status}
-                </span>
-                <div className="table-actions">
-                  <button type="button" className="ghost-btn ghost-sm" onClick={() => setEditingProduct(product)}>
-                    Editar
-                  </button>
-                  <button type="button" className="ghost-btn ghost-sm danger" onClick={() => handleDelete(product)}>
-                    Eliminar
-                  </button>
-                </div>
+          ) : error ? (
+            <div style={{ padding: '2rem', textAlign: 'center', color: 'red' }}>
+              <p>{error}</p>
+            </div>
+          ) : (
+            <div className="admin-table">
+              <div className="admin-table__head">
+                <span>Producto</span>
+                <span>Stock</span>
+                <span>Estado</span>
+                <span>Acciones</span>
               </div>
-            ))}
-            {products.length === 0 && (
-              <div className="empty-state">
-                <h3>No hay productos</h3>
-                <p>Cuando agregues uno aparecerá aquí.</p>
-              </div>
-            )}
-          </div>
+              {products.map((product) => (
+                <div key={product.id} className="admin-table__row">
+                  <div>
+                    <p className="table-title">{product.name}</p>
+                    <span className="muted">{product.category}</span>
+                  </div>
+                  <span>{product.stock} uds.</span>
+                  <span className={`status-pill status-${product.is_active ? 'activo' : 'inactivo'}`}>
+                    {product.is_active ? 'Activo' : 'Inactivo'}
+                  </span>
+                  <div className="table-actions">
+                    <button 
+                      type="button" 
+                      className="ghost-btn ghost-sm" 
+                      onClick={() => handleToggleActive(product)}
+                    >
+                      {product.is_active ? 'Desactivar' : 'Activar'}
+                    </button>
+                    <button type="button" className="ghost-btn ghost-sm" onClick={() => setEditingProduct(product)}>
+                      Editar
+                    </button>
+                    <button type="button" className="ghost-btn ghost-sm danger" onClick={() => handleDelete(product)}>
+                      Eliminar
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {products.length === 0 && (
+                <div className="empty-state">
+                  <h3>No hay productos</h3>
+                  <p>Cuando agregues uno aparecerá aquí.</p>
+                </div>
+              )}
+            </div>
+          )}
         </section>
 
         {editingProduct && (
@@ -132,8 +212,7 @@ const AdminDashboard = ({ products, onCreate, onUpdate, onDelete, onLogout }) =>
               initialData={editingProduct}
               submitLabel="Guardar cambios"
               onSubmit={(payload) => {
-                onUpdate(editingProduct.id, payload);
-                setEditingProduct(null);
+                handleUpdate(editingProduct.id, payload);
               }}
               onCancel={() => setEditingProduct(null)}
             />

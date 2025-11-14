@@ -28,3 +28,17 @@ def register(payload: schemas.UserCreate, db: Session = Depends(get_db)):
 def login(payload: schemas.UserLogin, db: Session = Depends(get_db)):
     """Valida credenciales y emite un token JWT de acceso corto."""
     return auth_service.login_user(db, payload)
+
+
+@router.get(
+    "/verify",
+    status_code=status.HTTP_200_OK,
+    summary="Verificar token JWT",
+)
+def verify_token(token: str = Depends(auth_service.get_current_user_from_token)):
+    """
+    Verifica la validez de un token JWT y retorna los datos del usuario.
+    
+    Este endpoint es usado por otros microservicios para validar tokens.
+    """
+    return token
