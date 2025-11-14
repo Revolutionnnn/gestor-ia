@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import Depends, HTTPException, Header, status
 from sqlalchemy.orm import Session
 
@@ -6,7 +8,10 @@ from .database import get_db
 from .models import Product
 
 
-def get_product_or_404(product_id: str, db: Session = Depends(get_db)) -> Product:
+def get_product_or_404(
+    product_id: str,
+    db: Session = Depends(get_db),
+) -> Product:
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(
@@ -23,7 +28,8 @@ async def get_current_user(authorization: str = Header(None)) -> dict:
     Uso:
         @router.post("/ruta-protegida")
         async def mi_ruta(user: dict = Depends(get_current_user)):
-            # user contendrá: {"username": "...", "role": "...", "user_id": "..."}
+            # user contendrá: {"username": "...", "role": "...",
+            # "user_id": "..."}
             pass
     
     Args:
@@ -67,7 +73,9 @@ async def get_current_user(authorization: str = Header(None)) -> dict:
     return user_data
 
 
-async def get_admin_user(current_user: dict = Depends(get_current_user)) -> dict:
+async def get_admin_user(
+    current_user: dict = Depends(get_current_user),
+) -> dict:
     """
     Dependencia de FastAPI que requiere que el usuario sea administrador.
     
@@ -93,3 +101,22 @@ async def get_admin_user(current_user: dict = Depends(get_current_user)) -> dict
         )
     
     return current_user
+
+
+async def get_optional_user(
+    authorization: str = Header(None),
+) -> Optional[dict]:
+    """Devuelve al usuario autenticado si se envía token o None en otro caso.
+
+    Permite exponer rutas públicas con capacidades adicionales cuando el
+    usuario se autentica voluntariamente.
+    """
+    if not authorization:
+        return None
+
+    try:
+        # type: ignore[arg-type] se usa porque forzamos la firma manualmente
+        return await get_current_user(authorization)
+    except HTTPException:
+        # En caso de token inválido, consideramos la petición como anónima
+        return None

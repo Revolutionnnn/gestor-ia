@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import ProductCard from '../components/ProductCard.jsx';
+import Modal from '../components/Modal.jsx';
 import api from '../services/api.js';
 
 const PublicCatalog = () => {
@@ -8,6 +9,9 @@ const PublicCatalog = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [sellingProductId, setSellingProductId] = useState(null);
+  const [purchaseProduct, setPurchaseProduct] = useState(null);
+  const [sellError, setSellError] = useState(null);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -54,6 +58,29 @@ const PublicCatalog = () => {
       return matchesSearch && matchesCategory;
     });
   }, [products, searchTerm, selectedCategory]);
+
+  const handleSell = async (product) => {
+    try {
+      setSellingProductId(product.id);
+      setSellError(null);
+      const sale = await api.products.sell(product.id);
+      setProducts((prev) =>
+        prev.map((item) =>
+          item.id === product.id ? { ...item, stock: sale.stock } : item
+        )
+      );
+      setPurchaseProduct({
+        id: product.id,
+        name: product.name,
+        stock: sale.stock,
+      });
+    } catch (err) {
+      console.error('Error selling product:', err);
+      setSellError('No pudimos completar la compra. Inténtalo nuevamente.');
+    } finally {
+      setSellingProductId(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -132,6 +159,13 @@ const PublicCatalog = () => {
         </div>
       </section>
 
+      {sellError && (
+        <div className="alert alert-error" role="status">
+          <strong>Ups, algo falló.</strong>
+          <span>{sellError}</span>
+        </div>
+      )}
+
       {filteredProducts.length === 0 ? (
         <div className="empty-state">
           <h3>No encontramos resultados</h3>
@@ -140,10 +174,40 @@ const PublicCatalog = () => {
       ) : (
         <section className="catalog-grid">
           {filteredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard
+              key={product.id}
+              product={product}
+              onSell={() => handleSell(product)}
+              isSelling={sellingProductId === product.id}
+            />
           ))}
         </section>
       )}
+
+      <Modal
+        isOpen={Boolean(purchaseProduct)}
+        title="¡Gracias por tu compra!"
+        subtitle="Estamos preparando tu pedido."
+        onClose={() => setPurchaseProduct(null)}
+        size="sm"
+      >
+        {purchaseProduct && (
+          <div className="purchase-modal__content">
+            <div className="purchase-modal__icon" aria-hidden="true">✨</div>
+            <h3>{purchaseProduct.name}</h3>
+            <p>
+              Te enviaremos un correo con el seguimiento. Stock restante: <strong>{purchaseProduct.stock}</strong>
+            </p>
+            <button
+              type="button"
+              className="primary-btn"
+              onClick={() => setPurchaseProduct(null)}
+            >
+              Seguir explorando
+            </button>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

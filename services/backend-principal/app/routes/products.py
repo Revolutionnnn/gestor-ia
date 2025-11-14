@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from ..config import logger
 from ..database import get_db
-from ..dependencies import get_admin_user, get_current_user
+from ..dependencies import get_admin_user, get_optional_user
 from ..schemas import (ProductCreate, ProductResponse, ProductUpdate,
                        SellResponse)
 from ..services.product_service import ProductService
@@ -59,17 +59,18 @@ async def get_product_public(product_id: UUID, db: Session = Depends(get_db)):
 @router.post(
     "/{product_id}/sell",
     response_model=SellResponse,
-    summary="Vender producto (requiere autenticación)",
+    summary="Vender producto (público)",
 )
 async def sell_product(
     product_id: UUID,
     db: Session = Depends(get_db),
-    user: dict = Depends(get_current_user),
+    user: dict | None = Depends(get_optional_user),
 ):
     """
     Registra la venta de una unidad del producto.
     
-    **Requiere autenticación (cualquier usuario autenticado).**
+    **Endpoint público**: se puede llamar sin autenticación, pero si el usuario
+    está autenticado se registra en los logs.
     
     - Reduce el stock en 1
     - Envía alerta si el stock es bajo
@@ -83,7 +84,7 @@ async def sell_product(
     logger.info(
         "product_sold",
         product_id=str(product.id),
-        sold_by=user.get("username"),
+        sold_by=user.get("username") if user else "guest",
         remaining_stock=product.stock,
     )
 
