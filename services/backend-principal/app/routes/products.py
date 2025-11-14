@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from ..config import logger
 from ..database import get_db
-from ..dependencies import get_admin_user, get_optional_user
+from ..services.auth_dependencies import get_admin_user, get_optional_user
 from ..schemas import (ProductCreate, ProductResponse, ProductUpdate,
                        SellResponse)
 from ..services.product_service import ProductService
@@ -14,23 +14,12 @@ from ..services.product_service import ProductService
 router = APIRouter(prefix="/products", tags=["Products"])
 
 
-# ==============================================================================
-# ENDPOINTS PÚBLICOS - No requieren autenticación
-# ==============================================================================
-
 @router.get(
     "",
     response_model=List[ProductResponse],
     summary="Listar productos activos (público)",
 )
 async def list_products_public(db: Session = Depends(get_db)):
-    """
-    Lista todos los productos activos y disponibles para el público.
-    
-    **Endpoint público - no requiere autenticación.**
-    
-    Solo muestra productos con `is_active=True`.
-    """
     service = ProductService(db)
     return service.list_products_public()
 
@@ -41,20 +30,9 @@ async def list_products_public(db: Session = Depends(get_db)):
     summary="Ver detalle de producto (público)",
 )
 async def get_product_public(product_id: UUID, db: Session = Depends(get_db)):
-    """
-    Obtiene el detalle de un producto activo.
-    
-    **Endpoint público - no requiere autenticación.**
-    
-    Solo muestra el producto si está activo (`is_active=True`).
-    """
     service = ProductService(db)
     return service.get_product_public(product_id)
 
-
-# ==============================================================================
-# ENDPOINTS DE USUARIO AUTENTICADO
-# ==============================================================================
 
 @router.post(
     "/{product_id}/sell",
@@ -66,21 +44,11 @@ async def sell_product(
     db: Session = Depends(get_db),
     user: dict | None = Depends(get_optional_user),
 ):
-    """
-    Registra la venta de una unidad del producto.
-    
-    **Endpoint público**: se puede llamar sin autenticación, pero si el usuario
-    está autenticado se registra en los logs.
-    
-    - Reduce el stock en 1
-    - Envía alerta si el stock es bajo
-    - Solo funciona con productos activos
-    """
     service = ProductService(db)
     product = service.get_product_public(product_id)
-    
+
     product = await service.sell_product(product)
-    
+
     logger.info(
         "product_sold",
         product_id=str(product.id),
@@ -95,10 +63,6 @@ async def sell_product(
     )
 
 
-# ==============================================================================
-# ENDPOINTS DE ADMINISTRADOR - Requieren rol admin
-# ==============================================================================
-
 @router.get(
     "/admin/all",
     response_model=List[ProductResponse],
@@ -108,13 +72,6 @@ async def list_all_products_admin(
     db: Session = Depends(get_db),
     user: dict = Depends(get_admin_user),
 ):
-    """
-    Lista todos los productos (activos e inactivos).
-    
-    **Requiere autenticación con rol de administrador.**
-    
-    Muestra productos con cualquier estado de `is_active`.
-    """
     service = ProductService(db)
     return service.list_products_admin()
 
@@ -129,11 +86,6 @@ async def get_product_admin(
     db: Session = Depends(get_db),
     user: dict = Depends(get_admin_user),
 ):
-    """
-    Obtiene el detalle de cualquier producto (activo o inactivo).
-    
-    **Requiere autenticación con rol de administrador.**
-    """
     service = ProductService(db)
     return service.get_product_by_id(product_id)
 
@@ -149,13 +101,6 @@ async def create_product(
     db: Session = Depends(get_db),
     user: dict = Depends(get_admin_user),
 ):
-    """
-    Crea un nuevo producto en el catálogo.
-    
-    **Requiere autenticación con rol de administrador.**
-    
-    Si no se proporciona descripción o categoría, se generan con IA.
-    """
     try:
         service = ProductService(db)
         result = await service.create_product(product)
@@ -185,16 +130,6 @@ async def update_product(
     db: Session = Depends(get_db),
     user: dict = Depends(get_admin_user),
 ):
-    """
-    Actualiza un producto existente.
-    
-    **Requiere autenticación con rol de administrador.**
-    
-    - Permite actualización parcial (solo campos proporcionados)
-    - Si se actualiza nombre/keywords, regenera descripción con IA
-    - Si se actualiza descripción, regenera categoría con IA
-    - Se puede activar/desactivar con `is_active`
-    """
     try:
         service = ProductService(db)
         result = await service.update_product(product_id, product)
@@ -225,16 +160,6 @@ async def delete_product(
     db: Session = Depends(get_db),
     user: dict = Depends(get_admin_user),
 ):
-    """
-    Elimina permanentemente un producto.
-    
-    **Requiere autenticación con rol de administrador.**
-    
-    **Advertencia**: Esta acción no se puede deshacer.
-    
-    Para ocultar temporalmente un producto, considera usar
-    `PUT /{product_id}` con `is_active=false` en su lugar.
-    """
     try:
         service = ProductService(db)
         service.delete_product(product_id)

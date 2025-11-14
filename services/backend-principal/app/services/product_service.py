@@ -1,5 +1,5 @@
 import asyncio
-from typing import List
+from typing import Any, List
 from uuid import UUID
 
 import httpx
@@ -25,8 +25,8 @@ class ProductService:
             product_data.keywords,
         )
         category = product_data.category or await generate_category(
-            product_data.name, 
-            description
+            product_data.name,
+            description,
         )
 
         db_product = Product(
@@ -53,16 +53,21 @@ class ProductService:
         return db_product
 
     def list_products_public(self) -> List[Product]:
-        """Lista solo productos activos para el público."""
-        return self.db.query(Product).filter(Product.is_active == True).all()
+        return (
+            self.db.query(Product)
+            .filter(Product.is_active.is_(True))
+            .all()
+        )
 
     def list_products_admin(self) -> List[Product]:
-        """Lista todos los productos (activos e inactivos) para admin."""
         return self.db.query(Product).all()
 
     def get_product_by_id(self, product_id: UUID) -> Product:
-        """Obtiene un producto por ID (admin puede ver cualquiera)."""
-        product = self.db.query(Product).filter(Product.id == product_id).first()
+        product = (
+            self.db.query(Product)
+            .filter(Product.id == product_id)
+            .first()
+        )
         if not product:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -71,10 +76,9 @@ class ProductService:
         return product
 
     def get_product_public(self, product_id: UUID) -> Product:
-        """Obtiene un producto activo para el público."""
         product = (
             self.db.query(Product)
-            .filter(Product.id == product_id, Product.is_active == True)
+            .filter(Product.id == product_id, Product.is_active.is_(True))
             .first()
         )
         if not product:
@@ -85,31 +89,29 @@ class ProductService:
         return product
 
     async def update_product(
-        self, 
-        product_id: UUID, 
-        product_data: ProductUpdate
+        self,
+        product_id: UUID,
+        product_data: ProductUpdate,
     ) -> Product:
-        """Actualiza un producto (solo admin)."""
         product = self.get_product_by_id(product_id)
 
-        update_data = product_data.model_dump(exclude_unset=True)
-        
-        # Si se actualiza nombre o keywords y no se proporciona descripción,
-        # regenerar descripción
-        if ("name" in update_data or "keywords" in update_data) and "description" not in update_data:
+        update_data: dict[str, Any] = product_data.model_dump(
+            exclude_unset=True,
+        )
+
+        if self._should_refresh_description(update_data):
             new_name = update_data.get("name", product.name)
             new_keywords = update_data.get("keywords", product.keywords)
             update_data["description"] = await generate_description(
-                new_name, 
-                new_keywords
+                new_name,
+                new_keywords,
             )
-        
-        # Si se actualiza descripción, regenerar categoría
+
         if "description" in update_data:
             new_name = update_data.get("name", product.name)
             update_data["category"] = await generate_category(
-                new_name, 
-                update_data["description"]
+                new_name,
+                update_data["description"],
             )
 
         for field, value in update_data.items():
@@ -127,9 +129,8 @@ class ProductService:
         return product
 
     def delete_product(self, product_id: UUID) -> None:
-        """Elimina un producto (solo admin)."""
         product = self.get_product_by_id(product_id)
-        
+
         self.db.delete(product)
         self.db.commit()
 
@@ -141,8 +142,6 @@ class ProductService:
 
     async def sell_product(self, product: Product) -> Product:
         if product.stock <= 0:
-            from fastapi import HTTPException, status
-
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Stock insuficiente",
@@ -158,22 +157,23 @@ class ProductService:
             new_stock=product.stock,
         )
 
-        # Verificar y enviar alerta de stock bajo en segundo plano
         if self.needs_stock_alert(product):
             asyncio.create_task(self._send_stock_alert(product))
 
         return product
 
+    @staticmethod
+    def _should_refresh_description(update_data: dict[str, Any]) -> bool:
+        return (
+            ("name" in update_data or "keywords" in update_data)
+            and "description" not in update_data
+        )
+
     def needs_stock_alert(self, product: Product) -> bool:
         return product.stock < LOW_STOCK_THRESHOLD
 
     async def _send_stock_alert(self, product: Product) -> None:
-        """
-        Envía una alerta al microservicio de alertas cuando el stock es bajo.
-        
-        Args:
-            product: Producto con stock bajo
-        """
+        """Send a low-stock webhook to the alerts microservice."""
         try:
             webhook_url = f"{ALERTS_SERVICE_URL}/webhook/stock-alert"
             payload = {
@@ -201,7 +201,6 @@ class ProductService:
             )
 
         except Exception as e:
-            # Log del error pero no falla la venta
             logger.error(
                 "stock_alert_error",
                 product_id=str(product.id),
