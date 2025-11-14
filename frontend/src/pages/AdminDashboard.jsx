@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminProductForm from '../components/AdminProductForm.jsx';
+import Modal from '../components/Modal.jsx';
 import api from '../services/api.js';
 
 const AdminDashboard = ({ onLogout }) => {
@@ -9,6 +10,7 @@ const AdminDashboard = ({ onLogout }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   useEffect(() => {
     fetchProducts();
@@ -32,6 +34,7 @@ const AdminDashboard = ({ onLogout }) => {
     try {
       await api.productsAdmin.create(productData);
       await fetchProducts();
+      setIsCreateModalOpen(false);
     } catch (err) {
       console.error('Error creating product:', err);
       alert('Error al crear el producto');
@@ -131,15 +134,36 @@ const AdminDashboard = ({ onLogout }) => {
       </section>
 
       <div className="admin-layout">
-        <section className="panel">
+        <section className="panel panel-cta">
           <div className="panel-header">
-            <h2>Crear nuevo producto</h2>
-            <p className="muted">Completa los campos y publícalo en la vista pública.</p>
+            <div>
+              <p className="eyebrow">Productos asistidos por IA</p>
+              <h2>Crear nuevo producto</h2>
+              <p className="muted">Lanza un artículo en cuestión de segundos y deja que la IA complete los campos opcionales.</p>
+            </div>
+            <div className="panel-header__actions">
+              <button type="button" className="primary-btn" onClick={() => setIsCreateModalOpen(true)}>
+                Nuevo producto
+              </button>
+              <button type="button" className="ghost-btn" onClick={fetchProducts} disabled={loading}>
+                {loading ? 'Actualizando…' : 'Refrescar inventario'}
+              </button>
+            </div>
           </div>
-          <AdminProductForm
-            submitLabel="Crear producto"
-            onSubmit={handleCreate}
-          />
+          <div className="panel-cta__grid">
+            <article className="panel-cta__item">
+              <strong>Descripción automática</strong>
+              <p className="muted">Sin descripción, la IA genera una ficha atractiva usando el nombre y keywords.</p>
+            </article>
+            <article className="panel-cta__item">
+              <strong>Categorías sugeridas</strong>
+              <p className="muted">No recuerdas la categoría ideal? la IA propone la mejor opción.</p>
+            </article>
+            <article className="panel-cta__item">
+              <strong>Visibilidad controlada</strong>
+              <p className="muted">Activa o pausa el producto cuando lo necesites, sin perder datos.</p>
+            </article>
+          </div>
         </section>
 
         <section className="panel">
@@ -200,24 +224,38 @@ const AdminDashboard = ({ onLogout }) => {
           )}
         </section>
 
-        {editingProduct && (
-          <section className="panel panel-highlight">
-            <div className="panel-header">
-              <h2>Editar producto</h2>
-              <button type="button" className="ghost-btn" onClick={() => setEditingProduct(null)}>
-                Cerrar
-              </button>
-            </div>
+        <Modal
+          isOpen={isCreateModalOpen}
+          title="Crear nuevo producto"
+          subtitle="Completa los campos obligatorios y deja que la IA termine el resto."
+          onClose={() => setIsCreateModalOpen(false)}
+          size="lg"
+        >
+          <AdminProductForm
+            title="Ficha del producto"
+            submitLabel="Crear producto"
+            onSubmit={handleCreate}
+            onCancel={() => setIsCreateModalOpen(false)}
+          />
+        </Modal>
+
+        <Modal
+          isOpen={Boolean(editingProduct)}
+          title={editingProduct ? `Editar ${editingProduct.name}` : 'Editar producto'}
+          subtitle="Actualiza el inventario, precios o estado y guarda los cambios."
+          onClose={() => setEditingProduct(null)}
+          size="lg"
+        >
+          {editingProduct && (
             <AdminProductForm
+              title="Actualizar datos"
               initialData={editingProduct}
               submitLabel="Guardar cambios"
-              onSubmit={(payload) => {
-                handleUpdate(editingProduct.id, payload);
-              }}
+              onSubmit={(payload) => handleUpdate(editingProduct.id, payload)}
               onCancel={() => setEditingProduct(null)}
             />
-          </section>
-        )}
+          )}
+        </Modal>
       </div>
     </div>
   );

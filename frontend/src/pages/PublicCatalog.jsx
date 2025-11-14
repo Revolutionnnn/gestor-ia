@@ -28,15 +28,29 @@ const PublicCatalog = () => {
   }, []);
 
   const categories = useMemo(() => {
-    const unique = new Set(products.map((product) => product.category));
+    const unique = new Set(
+      products
+        .map((product) => product.category?.trim())
+        .filter(Boolean)
+    );
     return ['all', ...Array.from(unique)];
   }, [products]);
 
   const filteredProducts = useMemo(() => {
+    const normalizedTerm = searchTerm.trim().toLowerCase();
     return products.filter((product) => {
-      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
+      const name = product.name?.toLowerCase() ?? '';
+      const description = product.description?.toLowerCase() ?? '';
+      const matchesSearch =
+        normalizedTerm.length === 0 ||
+        name.includes(normalizedTerm) ||
+        description.includes(normalizedTerm);
+
+      const normalizedCategory = product.category?.trim();
+      const matchesCategory =
+        selectedCategory === 'all' ||
+        (normalizedCategory && normalizedCategory === selectedCategory);
+
       return matchesSearch && matchesCategory;
     });
   }, [products, searchTerm, selectedCategory]);
@@ -81,27 +95,40 @@ const PublicCatalog = () => {
       </section>
 
       <section className="filters-panel">
-        <div className="search-bar">
-          <input
-            type="search"
-            placeholder="Buscar por nombre o descripción"
-            value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
-          />
+        <div className="filter-field filter-field--search">
+          <label htmlFor="catalog-search">
+            <span className="filter-field__label">Buscar productos</span>
+            <span className="filter-field__hint">Nombre o descripción</span>
+          </label>
+          <div className="input-shell">
+            <span className="input-shell__icon" aria-hidden="true">🔍</span>
+            <input
+              id="catalog-search"
+              type="search"
+              placeholder="Escribe para filtrar el catálogo"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+            />
+          </div>
         </div>
-        <div className="category-selector">
-          <label htmlFor="category-filter">Categoría</label>
-          <select
-            id="category-filter"
-            value={selectedCategory}
-            onChange={(event) => setSelectedCategory(event.target.value)}
-          >
-            {categories.map((category) => (
-              <option key={category} value={category}>
-                {category === 'all' ? 'Todas' : category}
-              </option>
-            ))}
-          </select>
+        <div className="filter-field">
+          <label htmlFor="category-filter">
+            <span className="filter-field__label">Filtrar por categoría</span>
+            <span className="filter-field__hint">Selecciona una opción específica</span>
+          </label>
+          <div className="input-shell">
+            <select
+              id="category-filter"
+              value={selectedCategory}
+              onChange={(event) => setSelectedCategory(event.target.value)}
+            >
+              {categories.map((category) => (
+                <option key={category} value={category}>
+                  {category === 'all' ? 'Todas' : category}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </section>
 

@@ -15,8 +15,8 @@ const TopNav = ({ isAuthenticated }) => {
   return (
     <header className="top-nav">
       <button type="button" className="brand-mark" onClick={handleBrandClick}>
-        <span className="brand-mark__prefix">neo</span>
-        <span className="brand-mark__suffix">store</span>
+        <span className="brand-mark__prefix">Orquestia</span>
+        <span className="brand-mark__suffix">Store</span>
       </button>
       <div className="nav-spacer" aria-hidden="true" />
       <div className="nav-actions">
