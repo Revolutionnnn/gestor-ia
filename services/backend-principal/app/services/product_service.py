@@ -173,7 +173,6 @@ class ProductService:
         return product.stock < LOW_STOCK_THRESHOLD
 
     async def _send_stock_alert(self, product: Product) -> None:
-        """Send a low-stock webhook to the alerts microservice."""
         try:
             webhook_url = f"{ALERTS_SERVICE_URL}/webhook/stock-alert"
             payload = {
